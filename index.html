@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Radio App</title>
+
+  <style>
+    :root {
+      --primary-100:#FF6600;
+      --primary-200:#ff983f;
+      --primary-300:#ffffa1;
+      --accent-100:#F5F5F5;
+      --accent-200:#929292;
+      --text-100:#FFFFFF;
+      --text-200:#e0e0e0;
+      --bg-100:#1D1F21;
+      --bg-200:#2c2e30;
+      --bg-300:#444648;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg-100);
+      color: var(--text-100);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      padding-bottom: 70px;
+    }
+
+    header {
+      padding: 16px;
+      text-align: center;
+      font-size: 20px;
+      font-weight: 600;
+      border-bottom: 1px solid var(--bg-300);
+    }
+
+    section {
+      padding: 12px 16px;
+    }
+
+    h2 {
+      font-size: 14px;
+      color: var(--accent-200);
+      margin: 20px 0 8px;
+    }
+
+    .channel {
+      background: var(--bg-200);
+      padding: 14px 16px;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: background 0.2s;
+    }
+
+    .channel.active {
+      background: var(--primary-100);
+      color: var(--bg-100);
+      font-weight: 600;
+    }
+
+    .channel span {
+      font-size: 15px;
+    }
+
+    .status-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      background: var(--bg-300);
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      font-size: 14px;
+      color: var(--text-200);
+    }
+
+    .status-bar strong {
+      color: var(--primary-200);
+      margin-left: 6px;
+    }
+  </style>
+</head>
+<body>
+
+<header>국내 라디오</header>
+
+<section id="radio-list"></section>
+
+<div class="status-bar">
+  현재 재생중:
+  <strong id="now-playing">없음</strong>
+</div>
+
+<script>
+  const channels = [
+    { group: 'SBS', list: [
+      { name: 'SBS 파워FM', url: 'https://radio.bsod.kr/stream/?stn=sbs&ch=powerfm' },
+      { name: 'SBS 러브FM', url: 'https://radio.bsod.kr/stream/?stn=sbs&ch=lovefm' },
+      { name: 'SBS 고릴라디오M', url: 'https://radio.bsod.kr/stream/?stn=sbs&ch=dmb' }
+    ]},
+    { group: 'MBC', list: [
+      { name: 'MBC 표준FM', url: 'https://radio.bsod.kr/stream/?stn=mbc&ch=sfm' },
+      { name: 'MBC FM4U', url: 'https://radio.bsod.kr/stream/?stn=mbc&ch=fm4u' },
+      { name: 'MBC mini 올댓뮤직', url: 'https://radio.bsod.kr/stream/?stn=mbc&ch=chm' }
+    ]},
+    { group: 'KBS', list: [
+      { name: 'KBS 1라디오', url: 'https://radio.bsod.kr/stream/?stn=kbs&ch=1radio' },
+      { name: 'KBS 2라디오', url: 'https://radio.bsod.kr/stream/?stn=kbs&ch=2radio' },
+      { name: 'KBS 3라디오', url: 'https://radio.bsod.kr/stream/?stn=kbs&ch=3radio' },
+      { name: 'KBS 1FM', url: 'https://radio.bsod.kr/stream/?stn=kbs&ch=1fm' },
+      { name: 'KBS 2FM', url: 'https://radio.bsod.kr/stream/?stn=kbs&ch=2fm' }
+    ]},
+    { group: 'ETC', list: [
+      { name: 'EBS FM', url: 'https://radio.bsod.kr/stream/?stn=ebs' },
+      { name: 'TBS FM', url: 'https://radio.bsod.kr/stream/?stn=tbs&ch=fm' },
+      { name: 'TBS eFM', url: 'https://radio.bsod.kr/stream/?stn=tbs&ch=efm' },
+      { name: 'CBS 표준FM', url: 'https://radio.bsod.kr/stream/?stn=cbs&ch=sfm' },
+      { name: 'CBS 음악FM', url: 'https://radio.bsod.kr/stream/?stn=cbs&ch=mfm' },
+      { name: 'CBS JOY4U', url: 'https://radio.bsod.kr/stream/?stn=cbs&ch=joy4u' }
+    ]}
+  ];
+
+  const listEl = document.getElementById('radio-list');
+  const nowPlayingEl = document.getElementById('now-playing');
+  const audio = new Audio();
+  let currentChannelEl = null;
+
+  channels.forEach(group => {
+    const title = document.createElement('h2');
+    title.textContent = group.group;
+    listEl.appendChild(title);
+
+    group.list.forEach(ch => {
+      const div = document.createElement('div');
+      div.className = 'channel';
+      div.innerHTML = `<span>${ch.name}</span>`;
+
+      div.addEventListener('click', () => {
+        if (currentChannelEl === div) {
+          audio.pause();
+          audio.src = '';
+          div.classList.remove('active');
+          currentChannelEl = null;
+          nowPlayingEl.textContent = '없음';
+        } else {
+          if (currentChannelEl) currentChannelEl.classList.remove('active');
+          audio.src = ch.url;
+          audio.play();
+          div.classList.add('active');
+          currentChannelEl = div;
+          nowPlayingEl.textContent = ch.name;
+        }
+      });
+
+      listEl.appendChild(div);
+    });
+  });
+</script>
+
+</body>
+</html>
