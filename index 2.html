@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<title>FM Radio</title>
+
+<style>
+:root{
+  --accent:#ff7a18;
+  --bg:#1d1f21;
+  --panel:#2c2e30;
+  --line:#3a3c3f;
+  --text:#fff;
+  --sub:#9a9a9a;
+}
+
+*{box-sizing:border-box}
+
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  padding-bottom:80px;
+}
+
+/* HEADER */
+header{
+  text-align:center;
+  padding:16px;
+  font-size:20px;
+  font-weight:600;
+  border-bottom:1px solid var(--line);
+}
+
+/* ===== ANALOG TUNER ===== */
+.tuner{
+  padding:18px 16px;
+  border-bottom:1px solid var(--line);
+}
+
+.dial{
+  position:relative;
+  height:80px;
+  background:linear-gradient(#e1a35c,#f1c27d);
+  border-radius:10px;
+  overflow:hidden;
+}
+
+/* 눈금 트랙 */
+.scale{
+  position:absolute;
+  top:0;
+  left:50%;
+  height:100%;
+  display:flex;
+  align-items:flex-end;
+  transition:transform 0.04s linear;
+}
+
+/* 눈금 */
+.tick{
+  width:24px;
+  text-align:center;
+  font-size:11px;
+  color:rgba(0,0,0,.55);
+}
+
+.tick::before{
+  content:"";
+  display:block;
+  height:36px;
+  width:1px;
+  background:rgba(0,0,0,.6);
+  margin:0 auto 4px;
+}
+
+/* 중앙 바늘 */
+.needle{
+  position:absolute;
+  top:-6px;
+  left:50%;
+  width:2px;
+  height:92px;
+  background:linear-gradient(#ff3b30,#b40000);
+  box-shadow:0 0 6px rgba(255,0,0,.6);
+  transform:translateX(-50%);
+  z-index:5;
+}
+
+/* 유리 커버 느낌 */
+.glass{
+  position:absolute;
+  inset:0;
+  background:linear-gradient(
+    120deg,
+    rgba(255,255,255,.35),
+    rgba(255,255,255,0) 40%
+  );
+  pointer-events:none;
+}
+
+.freq{
+  text-align:center;
+  font-size:34px;
+  font-weight:600;
+  margin-top:12px;
+  letter-spacing:-.02em;
+}
+
+.station{
+  text-align:center;
+  font-size:14px;
+  color:var(--sub);
+  height:18px;
+  margin-top:4px;
+}
+
+/* 입력 슬라이더 (보이지 않음) */
+#tuner{
+  position:absolute;
+  opacity:0;
+  pointer-events:auto;
+  width:100%;
+  height:80px;
+  top:0;
+  left:0;
+}
+
+/* ===== LIST ===== */
+section{padding:12px 16px}
+
+h2{
+  font-size:14px;
+  color:var(--sub);
+  margin:20px 0 8px;
+}
+
+.channel{
+  background:var(--panel);
+  padding:14px 16px;
+  border-radius:10px;
+  margin-bottom:10px;
+  cursor:pointer;
+}
+
+.channel.active{
+  background:var(--accent);
+  color:#000;
+  font-weight:600;
+}
+
+/* STATUS BAR */
+.status-bar{
+  position:fixed;
+  bottom:0;
+  left:0;
+  right:0;
+  height:60px;
+  background:var(--line);
+  display:flex;
+  align-items:center;
+  padding:0 16px;
+  font-size:14px;
+}
+
+.status-bar strong{
+  color:var(--accent);
+  margin-left:6px;
+}
+</style>
+</head>
+
+<body>
+
+<header>FM Radio</header>
+
+<div class="tuner">
+  <div class="dial">
+    <div class="scale" id="scale"></div>
+    <div class="needle"></div>
+    <div class="glass"></div>
+    <input type="range" id="tuner" min="88.0" max="108.0" step="0.1" value="99.9">
+  </div>
+  <div class="freq" id="freqText">99.9 MHz</div>
+  <div class="station" id="stationText">—</div>
+</div>
+
+<section id="radio-list"></section>
+
+<div class="status-bar">
+  현재 재생중:
+  <strong id="nowPlaying">없음</strong>
+</div>
+
+<script>
+/* ===== DATA (원본 + ETC 전부 유지) ===== */
+const channels=[
+ {group:'SBS',list:[
+  {name:'SBS 파워FM',freq:107.7,url:'https://radio.bsod.kr/stream/?stn=sbs&ch=powerfm'},
+  {name:'SBS 러브FM',freq:103.5,url:'https://radio.bsod.kr/stream/?stn=sbs&ch=lovefm'},
+  {name:'SBS 고릴라디오M',freq:95.1,url:'https://radio.bsod.kr/stream/?stn=sbs&ch=dmb'}
+ ]},
+ {group:'MBC',list:[
+  {name:'MBC 표준FM',freq:95.9,url:'https://radio.bsod.kr/stream/?stn=mbc&ch=sfm'},
+  {name:'MBC FM4U',freq:91.9,url:'https://radio.bsod.kr/stream/?stn=mbc&ch=fm4u'},
+  {name:'MBC mini 올댓뮤직',freq:100.7,url:'https://radio.bsod.kr/stream/?stn=mbc&ch=chm'}
+ ]},
+ {group:'KBS',list:[
+  {name:'KBS 1Radio',freq:97.3,url:'https://radio.bsod.kr/stream/?stn=kbs&ch=1radio'},
+  {name:'KBS HappyFM',freq:106.1,url:'https://radio.bsod.kr/stream/?stn=kbs&ch=2radio'},
+  {name:'KBS 3Radio',freq:104.9,url:'https://radio.bsod.kr/stream/?stn=kbs&ch=3radio'},
+  {name:'KBS ClassicFM',freq:93.1,url:'https://radio.bsod.kr/stream/?stn=kbs&ch=1fm'},
+  {name:'KBS CoolFM',freq:89.1,url:'https://radio.bsod.kr/stream/?stn=kbs&ch=2fm'}
+ ]},
+ {group:'ETC',list:[
+  {name:'EBS FM',freq:104.5,url:'https://radio.bsod.kr/stream/?stn=ebs'},
+  {name:'TBS FM',freq:95.1,url:'https://radio.bsod.kr/stream/?stn=tbs&ch=fm'},
+  {name:'TBS eFM',freq:101.3,url:'https://radio.bsod.kr/stream/?stn=tbs&ch=efm'},
+  {name:'CBS 표준FM',freq:98.1,url:'https://radio.bsod.kr/stream/?stn=cbs&ch=sfm'},
+  {name:'CBS 음악FM',freq:93.9,url:'https://radio.bsod.kr/stream/?stn=cbs&ch=mfm'},
+  {name:'CBS JOY4U',freq:102.1,url:'https://radio.bsod.kr/stream/?stn=cbs&ch=joy4u'}
+ ]}
+];
+
+const listEl=document.getElementById('radio-list');
+const scale=document.getElementById('scale');
+const tuner=document.getElementById('tuner');
+const freqText=document.getElementById('freqText');
+const stationText=document.getElementById('stationText');
+const nowPlaying=document.getElementById('nowPlaying');
+const audio=new Audio();
+audio.playsInline=true;
+
+let currentEl=null;
+const flat=[];
+
+/* 리스트 렌더 */
+channels.forEach(g=>{
+ const h=document.createElement('h2');
+ h.textContent=g.group;
+ listEl.appendChild(h);
+ g.list.forEach(ch=>{
+  flat.push(ch);
+  const d=document.createElement('div');
+  d.className='channel';
+  d.textContent=ch.name;
+  d.onclick=()=>select(ch,d);
+  listEl.appendChild(d);
+  ch.el=d;
+ });
+});
+
+/* 눈금 생성 */
+const minF=88,maxF=108;
+for(let f=minF;f<=maxF;f+=0.5){
+ const t=document.createElement('div');
+ t.className='tick';
+ t.textContent=f%1===0?f:'';
+ scale.appendChild(t);
+}
+
+/* 선택 */
+function select(ch,el){
+ if(currentEl)currentEl.classList.remove('active');
+ currentEl=el;
+ el.classList.add('active');
+ audio.src=ch.url;
+ audio.play();
+ tuner.value=ch.freq;
+ updateDial();
+ stationText.textContent=ch.name;
+ nowPlaying.textContent=ch.name;
+}
+
+/* 다이얼 이동 */
+function updateDial(){
+ const f=parseFloat(tuner.value);
+ freqText.textContent=f.toFixed(1)+' MHz';
+ const ratio=(f-minF)/(maxF-minF);
+ scale.style.transform=`translateX(${-ratio*(maxF-minF)*24}px)`;
+}
+
+/* 튜너 드래그 */
+tuner.addEventListener('input',()=>{
+ updateDial();
+ const f=parseFloat(tuner.value);
+ let nearest=flat.reduce((a,b)=>Math.abs(b.freq-f)<Math.abs(a.freq-f)?b:a);
+ select(nearest,nearest.el);
+});
+
+/* 초기화 */
+updateDial();
+</script>
+
+</body>
+</html>
