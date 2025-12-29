@@ -37,8 +37,6 @@ header{
   border-radius:12px;
   overflow:hidden;
 }
-
-/* scale */
 .scale{
   position:absolute;
   inset:0;
@@ -75,7 +73,6 @@ header{
   margin-top:4px;
 }
 
-/* needle */
 .needle{
   position:absolute;
   top:-10px;
@@ -86,26 +83,18 @@ header{
   z-index:5;
 }
 
-/* IMPORTANT: iOS-compatible range */
 #freqRange{
   position:absolute;
   inset:0;
+  opacity:0.01;
   z-index:10;
-  background:transparent;
-  appearance:none;
-  -webkit-appearance:none;
-}
-#freqRange::-webkit-slider-thumb{
-  -webkit-appearance:none;
-  width:100%;
-  height:100%;
-  background:transparent;
+  touch-action:pan-x;
 }
 
 .freq{text-align:center;font-size:34px;margin-top:10px}
 .station{text-align:center;font-size:14px;color:var(--sub);height:18px}
 
-/* list */
+/* ===== LIST ===== */
 section{padding:12px 16px}
 h2{font-size:13px;color:var(--sub);margin:18px 0 8px}
 .channel{
@@ -113,6 +102,7 @@ h2{font-size:13px;color:var(--sub);margin:18px 0 8px}
   padding:14px;
   border-radius:10px;
   margin-bottom:8px;
+  cursor:pointer;
 }
 .channel.active{background:var(--accent);color:#000}
 .channel.paused{opacity:.6}
@@ -135,15 +125,15 @@ h2{font-size:13px;color:var(--sub);margin:18px 0 8px}
 
 <section id="radio-list"></section>
 
-<!-- 🔴 반드시 DOM에 존재해야 함 -->
-<audio id="player" playsinline></audio>
-
 <script>
+/* ===== CONSTANT ===== */
 const MIN=87.5, MAX=108.0, SNAP=0.15;
 
-const audio=document.getElementById('player');
+/* ===== AUDIO ===== */
+const audio=new Audio();
+audio.crossOrigin="anonymous";
 
-/* ===== Media Session ===== */
+/* ===== MEDIA SESSION ===== */
 function updateMediaSession(title, artist){
   if(!('mediaSession' in navigator)) return;
   navigator.mediaSession.metadata=new MediaMetadata({
@@ -151,15 +141,16 @@ function updateMediaSession(title, artist){
     artist,
     album:'Live Radio',
     artwork:[{
-      src:'https://upload.wikimedia.org/wikipedia/commons/4/4f/Radio_icon.svg',
+      src:'https://raw.githubusercontent.com/euijoo/kr_radio/03d1ba9dcd810ae5d613a287b5698585bb251d1e/img/lockicon.svg',
       sizes:'512x512',
       type:'image/png'
     }]
   });
 }
 
-/* ===== Noise ===== */
-const ctx=new (window.AudioContext||window.webkitAudioContext)();
+/* ===== NOISE ===== */
+const AudioCtx=window.AudioContext||window.webkitAudioContext;
+const ctx=new AudioCtx();
 const noiseGain=ctx.createGain();
 noiseGain.gain.value=0;
 
@@ -173,16 +164,51 @@ noise.loop=true;
 noise.connect(noiseGain).connect(ctx.destination);
 noise.start();
 
-/* ===== Channels ===== */
+/* ===== CHANNEL DATA ===== */
 const channels=[
+{group:'SBS',list:[
+ {name:'SBS 파워FM',freq:107.7,url:'https://radio.bsod.kr/stream/?stn=sbs&ch=powerfm'},
+ {name:'SBS 러브FM',freq:103.5,url:'https://radio.bsod.kr/stream/?stn=sbs&ch=lovefm'},
+ {name:'SBS 고릴라디오M',freq:95.1,url:'https://radio.bsod.kr/stream/?stn=sbs&ch=dmb'}
+]},
+{group:'MBC',list:[
+ {name:'MBC 표준FM',freq:95.9,url:'https://radio.bsod.kr/stream/?stn=mbc&ch=sfm'},
+ {name:'MBC FM4U',freq:91.9,url:'https://radio.bsod.kr/stream/?stn=mbc&ch=fm4u'},
+ {name:'MBC mini 올댓뮤직',freq:100.7,url:'https://radio.bsod.kr/stream/?stn=mbc&ch=chm'}
+]},
 {group:'KBS',list:[
  {name:'KBS 1라디오',freq:97.3,url:'https://radio.bsod.kr/stream/?stn=kbs&ch=1radio'},
+ {name:'KBS 2라디오',freq:106.1,url:'https://radio.bsod.kr/stream/?stn=kbs&ch=2radio'},
+ {name:'KBS 3라디오',freq:104.9,url:'https://radio.bsod.kr/stream/?stn=kbs&ch=3radio'},
+ {name:'KBS 1FM',freq:93.1,url:'https://radio.bsod.kr/stream/?stn=kbs&ch=1fm'},
  {name:'KBS 2FM',freq:89.1,url:'https://radio.bsod.kr/stream/?stn=kbs&ch=2fm'}
+]},
+{group:'ETC',list:[
+ {name:'EBS FM',freq:104.5,url:'https://radio.bsod.kr/stream/?stn=ebs'},
+ {name:'TBS FM',freq:95.1,url:'https://radio.bsod.kr/stream/?stn=tbs&ch=fm'},
+ {name:'TBS eFM',freq:101.3,url:'https://radio.bsod.kr/stream/?stn=tbs&ch=efm'},
+ {name:'CBS 표준FM',freq:98.1,url:'https://radio.bsod.kr/stream/?stn=cbs&ch=sfm'},
+ {name:'CBS 음악FM',freq:93.9,url:'https://radio.bsod.kr/stream/?stn=cbs&ch=mfm'},
+ {name:'CBS JOY4U',freq:90.1,url:'https://radio.bsod.kr/stream/?stn=cbs&ch=joy4u'}
 ]}
 ];
 
-const flat=[];
+const scale=document.getElementById('scale');
+for(let f=MIN;f<=MAX+0.001;f+=0.1){
+ const t=document.createElement('div');
+ t.className='tick';
+ if(Math.abs(f-Math.round(f))<0.001){
+  t.classList.add('big');
+  t.innerHTML=`<span>${Math.round(f)}</span>`;
+ }else if(Math.abs((f*10)%5)<0.001){
+  t.classList.add('mid');
+ }else t.classList.add('small');
+ scale.appendChild(t);
+}
+
+/* ===== LIST ===== */
 const list=document.getElementById('radio-list');
+const flat=[];
 channels.forEach(g=>{
  const h=document.createElement('h2');
  h.textContent=g.group;
@@ -193,62 +219,79 @@ channels.forEach(g=>{
   const d=document.createElement('div');
   d.className='channel';
   d.textContent=ch.name;
-  d.onclick=()=>selectChannel(item);
+  d.onclick=()=>onListClick(item,d);
   list.appendChild(d);
   item.el=d;
  });
 });
 
-/* ===== UI ===== */
+/* ===== STATE ===== */
 const range=document.getElementById('freqRange');
 const needle=document.getElementById('needle');
 const freqText=document.getElementById('freqText');
 const stationText=document.getElementById('stationText');
 let current=null,isPlaying=false;
 
+/* ===== FUNCTIONS ===== */
+function setNoise(v){
+ noiseGain.gain.linearRampToValueAtTime(v,ctx.currentTime+0.15);
+}
 function updateNeedle(freq){
  const w=document.getElementById('dial').clientWidth;
  needle.style.left=((freq-MIN)/(MAX-MIN)*w)+'px';
  freqText.textContent=freq.toFixed(1)+' MHz';
 }
-
-function setNoise(v){
- noiseGain.gain.linearRampToValueAtTime(v,ctx.currentTime+0.15);
-}
-
-function tune(freq){
+function tune(freq,force=false){
  const nearest=flat.reduce((a,b)=>Math.abs(b.freq-freq)<Math.abs(a.freq-freq)?b:a);
  stationText.textContent=nearest.name;
 
  if(Math.abs(nearest.freq-freq)<=SNAP){
   setNoise(0);
   if(current!==nearest){
+   if(current?.el) current.el.classList.remove('active','paused');
    current=nearest;
    audio.src=nearest.url;
    updateMediaSession(nearest.name,nearest.group);
   }
-  if(!isPlaying){
+  if(!isPlaying||force){
    audio.play();
    isPlaying=true;
   }
+  nearest.el.classList.add('active');
  }else{
-  setNoise(0.08);
+  setNoise(0.1);
   audio.pause();
   isPlaying=false;
+  current?.el?.classList.add('paused');
+ }
+}
+function onListClick(ch,el){
+ if(current===ch){
+  if(isPlaying){
+   audio.pause();isPlaying=false;el.classList.add('paused');
+  }else{
+   audio.play();isPlaying=true;el.classList.remove('paused');
+  }
+ }else{
+  range.value=ch.freq;
+  updateNeedle(ch.freq);
+  tune(ch.freq,true);
  }
 }
 
-function selectChannel(ch){
- range.value=ch.freq;
- updateNeedle(ch.freq);
- tune(ch.freq);
-}
-
-/* events */
+/* ===== EVENTS ===== */
 range.addEventListener('input',()=>{
  ctx.resume();
- updateNeedle(+range.value);
- tune(+range.value);
+ const f=parseFloat(range.value);
+ updateNeedle(f);
+ tune(f);
+});
+range.addEventListener('change',()=>{
+ const f=parseFloat(range.value);
+ const n=flat.reduce((a,b)=>Math.abs(b.freq-f)<Math.abs(a.freq-f)?b:a);
+ range.value=n.freq;
+ updateNeedle(n.freq);
+ tune(n.freq,true);
 });
 
 updateNeedle(range.value);
