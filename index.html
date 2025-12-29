@@ -1,300 +1,329 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-<meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>FM Radio</title>
+<script src="https://cdn.tailwindcss.com"></script>
 
 <style>
-:root{
-  --accent:#ff7a18;
-  --bg:#1d1f21;
-  --panel:#2c2e30;
-  --line:#3a3c3f;
-  --text:#fff;
-  --sub:#9a9a9a;
+/* ================== TUNER SIZE ================== */
+#dial{
+  --dial-height: 220px;
+  height: var(--dial-height);
 }
 
-*{box-sizing:border-box}
-
-body{
-  margin:0;
-  background:var(--bg);
-  color:var(--text);
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-  padding-bottom:80px;
-}
-
-/* HEADER */
-header{
-  text-align:center;
-  padding:16px;
-  font-size:20px;
-  font-weight:600;
-  border-bottom:1px solid var(--line);
-}
-
-/* ===== ANALOG TUNER ===== */
-.tuner{
-  padding:18px 16px;
-  border-bottom:1px solid var(--line);
-}
-
-.dial{
-  position:relative;
-  height:80px;
-  background:linear-gradient(#e1a35c,#f1c27d);
-  border-radius:10px;
-  overflow:hidden;
-}
-
-/* 눈금 트랙 */
+/* ================== SCALE ================== */
 .scale{
   position:absolute;
-  top:0;
-  left:50%;
-  height:100%;
+  inset:0;
   display:flex;
   align-items:flex-end;
-  transition:transform 0.04s linear;
+  padding:0 12px;
 }
-
-/* 눈금 */
 .tick{
-  width:24px;
-  text-align:center;
-  font-size:11px;
-  color:rgba(0,0,0,.55);
+  width:6px;
+  height:100%;
+  position:relative;
 }
-
 .tick::before{
   content:"";
-  display:block;
-  height:36px;
-  width:1px;
-  background:rgba(0,0,0,.6);
-  margin:0 auto 4px;
-}
-
-/* 중앙 바늘 */
-.needle{
   position:absolute;
-  top:-6px;
+  bottom:0;
   left:50%;
-  width:2px;
-  height:92px;
-  background:linear-gradient(#ff3b30,#b40000);
-  box-shadow:0 0 6px rgba(255,0,0,.6);
   transform:translateX(-50%);
-  z-index:5;
 }
 
-/* 유리 커버 느낌 */
-.glass{
+.tick.small::before{
+  width:1px;
+  height:35%;
+  background:#e5e5e5;
+  opacity:.6;
+}
+.tick.mid::before{
+  width:1px;
+  height:55%;
+  background:#f0f0f0;
+  opacity:.8;
+}
+.tick.big::before{
+  width:2px;
+  height:85%;
+  background:#ffffff;
+  opacity:.95;
+}
+.tick.big span{
   position:absolute;
-  inset:0;
-  background:linear-gradient(
-    120deg,
-    rgba(255,255,255,.35),
-    rgba(255,255,255,0) 40%
-  );
-  pointer-events:none;
+  bottom:calc(85% + 6px);
+  left:50%;
+  transform:translateX(-50%);
+  font-size:10px;
+  color:#e0e0e0;
 }
 
-.freq{
-  text-align:center;
-  font-size:34px;
+/* ================== NEEDLE ================== */
+#needle{
+  position:absolute;
+  top:-12px;
+  width:3px;
+  height:calc(var(--dial-height) + 24px);
+  background:linear-gradient(#ffd700,#ffae00);
+  box-shadow:0 0 12px rgba(255,215,0,.9);
+  z-index:10;
+}
+
+/* ================== INFO (튜너 아래) ================== */
+#dialInfo{
+  padding:10px 12px 0;
+}
+#freqText{
+  font-size:32px;
   font-weight:600;
-  margin-top:12px;
-  letter-spacing:-.02em;
+  line-height:1;
 }
-
-.station{
-  text-align:center;
-  font-size:14px;
-  color:var(--sub);
-  height:18px;
+#stationText{
+  font-size:13px;
+  color:#9ca3af;
   margin-top:4px;
 }
 
-/* 입력 슬라이더 (보이지 않음) */
-#tuner{
-  position:absolute;
+/* ================== UI ================== */
+.stereo{
+  width:10px;height:10px;border-radius:50%;
+  background:#0f0;box-shadow:0 0 10px #0f0;
+  opacity:0;transition:.3s
+}
+.stereo.on{opacity:1}
+
+.power-on{background:#facc15!important;box-shadow:0 0 12px #facc15}
+
+.tab{cursor:pointer;font-weight:600;color:#aaa;padding-bottom:4px}
+.tab.active{color:#fff;border-bottom:2px solid #facc15}
+
+/* ================== CHANNEL LIST ================== */
+#channelList{
+  overflow:hidden;
+  height:0;
   opacity:0;
-  pointer-events:auto;
-  width:100%;
-  height:80px;
-  top:0;
-  left:0;
+  transform:translateY(-6px);
+  transition:
+    height .45s cubic-bezier(.4,0,.2,1),
+    opacity .3s ease,
+    transform .45s cubic-bezier(.4,0,.2,1);
 }
-
-/* ===== LIST ===== */
-section{padding:12px 16px}
-
-h2{
-  font-size:14px;
-  color:var(--sub);
-  margin:20px 0 8px;
+#channelList.open{opacity:1;transform:translateY(0)}
+.channel-item{
+  opacity:0;
+  transform:translateY(6px);
+  transition:all .35s ease
 }
-
-.channel{
-  background:var(--panel);
-  padding:14px 16px;
-  border-radius:10px;
-  margin-bottom:10px;
-  cursor:pointer;
-}
-
-.channel.active{
-  background:var(--accent);
-  color:#000;
-  font-weight:600;
-}
-
-/* STATUS BAR */
-.status-bar{
-  position:fixed;
-  bottom:0;
-  left:0;
-  right:0;
-  height:60px;
-  background:var(--line);
-  display:flex;
-  align-items:center;
-  padding:0 16px;
-  font-size:14px;
-}
-
-.status-bar strong{
-  color:var(--accent);
-  margin-left:6px;
+#channelList.open .channel-item{
+  opacity:1;
+  transform:translateY(0)
 }
 </style>
 </head>
 
-<body>
+<body class="bg-neutral-900 text-white max-w-md mx-auto">
 
-<header>FM Radio</header>
+<header class="flex justify-between items-center px-4 py-3 text-lg font-semibold">
+  <span>FM Radio</span>
+  <button id="powerBtn" class="w-9 h-9 rounded-full bg-neutral-700"></button>
+</header>
 
-<div class="tuner">
-  <div class="dial">
-    <div class="scale" id="scale"></div>
-    <div class="needle"></div>
-    <div class="glass"></div>
-    <input type="range" id="tuner" min="88.0" max="108.0" step="0.1" value="99.9">
+<div class="px-4">
+  <!-- 튜너 프레임 -->
+  <div id="dial" class="relative rounded-xl overflow-hidden bg-gradient-to-b from-neutral-800 to-neutral-900">
+    <div id="scale" class="scale"></div>
+    <div id="needle"></div>
+    <input id="freqRange" type="range" min="87.5" max="108" step="0.1"
+      class="absolute inset-0 opacity-0 z-20 touch-pan-x">
   </div>
-  <div class="freq" id="freqText">99.9 MHz</div>
-  <div class="station" id="stationText">—</div>
+
+  <!-- 🔥 튜너 프레임 바로 아래 -->
+  <div id="dialInfo">
+    <div id="freqText"></div>
+    <div id="stationText"></div>
+  </div>
+
+  <div class="flex justify-end mt-3">
+    <div id="stereoLamp" class="stereo"></div>
+  </div>
 </div>
 
-<section id="radio-list"></section>
-
-<div class="status-bar">
-  현재 재생중:
-  <strong id="nowPlaying">없음</strong>
-</div>
+<div id="tabs" class="flex justify-around px-6 mt-6"></div>
+<div id="channelList" class="px-4 py-4"></div>
 
 <script>
-/* ===== DATA (원본 + ETC 전부 유지) ===== */
+const MIN=87.5, MAX=108;
+const audio=new Audio();
+const ctx=new (window.AudioContext||window.webkitAudioContext)();
+const noiseGain=ctx.createGain(); noiseGain.gain.value=0;
+
+const buffer=ctx.createBuffer(1,ctx.sampleRate*2,ctx.sampleRate);
+const data=buffer.getChannelData(0);
+for(let i=0;i<data.length;i++) data[i]=(Math.random()*2-1)*0.5;
+
+const noise=ctx.createBufferSource();
+noise.buffer=buffer; noise.loop=true;
+noise.connect(noiseGain).connect(ctx.destination);
+noise.start();
+
 const channels=[
- {group:'SBS',list:[
-  {name:'SBS 파워FM',freq:107.7,url:'https://radio.bsod.kr/stream/?stn=sbs&ch=powerfm'},
-  {name:'SBS 러브FM',freq:103.5,url:'https://radio.bsod.kr/stream/?stn=sbs&ch=lovefm'},
-  {name:'SBS 고릴라디오M',freq:95.1,url:'https://radio.bsod.kr/stream/?stn=sbs&ch=dmb'}
- ]},
- {group:'MBC',list:[
-  {name:'MBC 표준FM',freq:95.9,url:'https://radio.bsod.kr/stream/?stn=mbc&ch=sfm'},
-  {name:'MBC FM4U',freq:91.9,url:'https://radio.bsod.kr/stream/?stn=mbc&ch=fm4u'},
-  {name:'MBC mini 올댓뮤직',freq:100.7,url:'https://radio.bsod.kr/stream/?stn=mbc&ch=chm'}
- ]},
- {group:'KBS',list:[
-  {name:'KBS 1Radio',freq:97.3,url:'https://radio.bsod.kr/stream/?stn=kbs&ch=1radio'},
-  {name:'KBS HappyFM',freq:106.1,url:'https://radio.bsod.kr/stream/?stn=kbs&ch=2radio'},
-  {name:'KBS 3Radio',freq:104.9,url:'https://radio.bsod.kr/stream/?stn=kbs&ch=3radio'},
-  {name:'KBS ClassicFM',freq:93.1,url:'https://radio.bsod.kr/stream/?stn=kbs&ch=1fm'},
-  {name:'KBS CoolFM',freq:89.1,url:'https://radio.bsod.kr/stream/?stn=kbs&ch=2fm'}
- ]},
- {group:'ETC',list:[
-  {name:'EBS FM',freq:104.5,url:'https://radio.bsod.kr/stream/?stn=ebs'},
-  {name:'TBS FM',freq:95.1,url:'https://radio.bsod.kr/stream/?stn=tbs&ch=fm'},
-  {name:'TBS eFM',freq:101.3,url:'https://radio.bsod.kr/stream/?stn=tbs&ch=efm'},
-  {name:'CBS 표준FM',freq:98.1,url:'https://radio.bsod.kr/stream/?stn=cbs&ch=sfm'},
-  {name:'CBS 음악FM',freq:93.9,url:'https://radio.bsod.kr/stream/?stn=cbs&ch=mfm'},
-  {name:'CBS JOY4U',freq:102.1,url:'https://radio.bsod.kr/stream/?stn=cbs&ch=joy4u'}
- ]}
+{group:'SBS',list:[
+{name:'SBS 파워FM',freq:107.7,url:'https://radio.bsod.kr/stream/?stn=sbs&ch=powerfm'},
+{name:'SBS 러브FM',freq:103.5,url:'https://radio.bsod.kr/stream/?stn=sbs&ch=lovefm'},
+{name:'SBS 고릴라디오M',freq:95.1,url:'https://radio.bsod.kr/stream/?stn=sbs&ch=dmb'}
+]},
+{group:'MBC',list:[
+{name:'MBC FM4U',freq:91.9,url:'https://radio.bsod.kr/stream/?stn=mbc&ch=fm4u'},
+{name:'MBC 표준FM',freq:95.9,url:'https://radio.bsod.kr/stream/?stn=mbc&ch=sfm'},
+{name:'MBC 올댓뮤직',freq:100.7,url:'https://radio.bsod.kr/stream/?stn=mbc&ch=chm'}
+]},
+{group:'KBS',list:[
+{name:'KBS 1라디오',freq:97.3,url:'https://radio.bsod.kr/stream/?stn=kbs&ch=1radio'},
+{name:'KBS 2라디오',freq:106.1,url:'https://radio.bsod.kr/stream/?stn=kbs&ch=2radio'},
+{name:'KBS 3라디오',freq:104.9,url:'https://radio.bsod.kr/stream/?stn=kbs&ch=3radio'},
+{name:'KBS 1FM',freq:93.1,url:'https://radio.bsod.kr/stream/?stn=kbs&ch=1fm'},
+{name:'KBS 2FM',freq:89.1,url:'https://radio.bsod.kr/stream/?stn=kbs&ch=2fm'}
+]},
+{group:'ETC',list:[
+{name:'EBS FM',freq:104.5,url:'https://radio.bsod.kr/stream/?stn=ebs'},
+{name:'TBS FM',freq:95.1,url:'https://radio.bsod.kr/stream/?stn=tbs&ch=fm'},
+{name:'TBS eFM',freq:101.3,url:'https://radio.bsod.kr/stream/?stn=tbs&ch=efm'},
+{name:'CBS 표준FM',freq:98.1,url:'https://radio.bsod.kr/stream/?stn=cbs&ch=sfm'},
+{name:'CBS 음악FM',freq:93.9,url:'https://radio.bsod.kr/stream/?stn=cbs&ch=mfm'},
+{name:'CBS JOY4U',freq:90.1,url:'https://radio.bsod.kr/stream/?stn=cbs&ch=joy4u'}
+]}
 ];
 
-const listEl=document.getElementById('radio-list');
 const scale=document.getElementById('scale');
-const tuner=document.getElementById('tuner');
+for(let f=MIN; f<=MAX+0.001; f+=0.1){
+  const t=document.createElement('div');
+  t.className='tick';
+  const step=Math.round((f*10)%10);
+  if(step===0){
+    t.classList.add('big');
+    t.innerHTML=`<span>${Math.round(f)}</span>`;
+  }else if(step===5){
+    t.classList.add('mid');
+  }else{
+    t.classList.add('small');
+  }
+  scale.appendChild(t);
+}
+
+let power=false,activeGroup=null;
+const range=document.getElementById('freqRange');
+const needle=document.getElementById('needle');
 const freqText=document.getElementById('freqText');
 const stationText=document.getElementById('stationText');
-const nowPlaying=document.getElementById('nowPlaying');
-const audio=new Audio();
-audio.playsInline=true;
+const stereo=document.getElementById('stereoLamp');
+const powerBtn=document.getElementById('powerBtn');
+const tabs=document.getElementById('tabs');
+const channelList=document.getElementById('channelList');
 
-let currentEl=null;
-const flat=[];
+function updateNeedle(f){
+  needle.style.left=((f-MIN)/(MAX-MIN)*dial.clientWidth)+'px';
+  freqText.textContent=f.toFixed(1)+' MHz';
+}
 
-/* 리스트 렌더 */
+function snapTo(freq){
+  const flat=channels.flatMap(g=>g.list);
+  const nearest=flat.reduce((a,b)=>Math.abs(b.freq-freq)<Math.abs(a.freq-freq)?b:a);
+  range.value=nearest.freq;
+  updateNeedle(nearest.freq);
+  if(!power) return;
+  noiseGain.gain.value=0;
+  stereo.classList.add('on');
+  audio.src=nearest.url;
+  audio.volume=0;
+  audio.play();
+  let v=0;
+  const fade=setInterval(()=>{
+    v+=0.05;
+    audio.volume=Math.min(v,1);
+    if(v>=1) clearInterval(fade);
+  },40);
+  stationText.textContent=nearest.name;
+}
+
+function openList(){
+  channelList.classList.add('open');
+  channelList.style.height=channelList.scrollHeight+'px';
+}
+function closeList(){
+  channelList.style.height=channelList.scrollHeight+'px';
+  requestAnimationFrame(()=>{
+    channelList.style.height='0px';
+    channelList.classList.remove('open');
+  });
+}
+
 channels.forEach(g=>{
- const h=document.createElement('h2');
- h.textContent=g.group;
- listEl.appendChild(h);
- g.list.forEach(ch=>{
-  flat.push(ch);
-  const d=document.createElement('div');
-  d.className='channel';
-  d.textContent=ch.name;
-  d.onclick=()=>select(ch,d);
-  listEl.appendChild(d);
-  ch.el=d;
- });
+  const tab=document.createElement('div');
+  tab.className='tab';
+  tab.textContent=g.group;
+  tab.onclick=()=>{
+    if(activeGroup===g){
+      closeList(); activeGroup=null;
+      document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+      return;
+    }
+    activeGroup=g;
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');
+    channelList.innerHTML='';
+    g.list.forEach(ch=>{
+      const d=document.createElement('div');
+      d.className="channel-item flex justify-between bg-neutral-800 rounded-lg p-3 mb-2 cursor-pointer";
+      d.innerHTML=`<span>${ch.name}</span><span class="text-xs text-gray-400">${ch.freq.toFixed(1)}</span>`;
+      d.onclick=()=>{
+        snapTo(ch.freq);
+        closeList();
+        document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+        activeGroup=null;
+      };
+      channelList.appendChild(d);
+    });
+    openList();
+  };
+  tabs.appendChild(tab);
 });
 
-/* 눈금 생성 */
-const minF=88,maxF=108;
-for(let f=minF;f<=maxF;f+=0.5){
- const t=document.createElement('div');
- t.className='tick';
- t.textContent=f%1===0?f:'';
- scale.appendChild(t);
-}
-
-/* 선택 */
-function select(ch,el){
- if(currentEl)currentEl.classList.remove('active');
- currentEl=el;
- el.classList.add('active');
- audio.src=ch.url;
- audio.play();
- tuner.value=ch.freq;
- updateDial();
- stationText.textContent=ch.name;
- nowPlaying.textContent=ch.name;
-}
-
-/* 다이얼 이동 */
-function updateDial(){
- const f=parseFloat(tuner.value);
- freqText.textContent=f.toFixed(1)+' MHz';
- const ratio=(f-minF)/(maxF-minF);
- scale.style.transform=`translateX(${-ratio*(maxF-minF)*24}px)`;
-}
-
-/* 튜너 드래그 */
-tuner.addEventListener('input',()=>{
- updateDial();
- const f=parseFloat(tuner.value);
- let nearest=flat.reduce((a,b)=>Math.abs(b.freq-f)<Math.abs(a.freq-f)?b:a);
- select(nearest,nearest.el);
+range.addEventListener('input',()=>{
+  ctx.resume();
+  updateNeedle(+range.value);
+  if(!power){
+    noiseGain.gain.value=0;
+    stereo.classList.remove('on');
+    stationText.textContent='';
+    return;
+  }
+  noiseGain.gain.value=0.05;
+  stereo.classList.remove('on');
+  stationText.textContent='스캔중...';
 });
+range.addEventListener('change',()=>snapTo(+range.value));
 
-/* 초기화 */
-updateDial();
+powerBtn.onclick=()=>{
+  power=!power;
+  powerBtn.classList.toggle('power-on',power);
+  if(!power){
+    audio.pause();
+    noiseGain.gain.value=0;
+    stereo.classList.remove('on');
+    stationText.textContent='전원 꺼짐';
+  }else{
+    stationText.textContent='예열중...';
+    noiseGain.gain.value=0.05;
+    setTimeout(()=>snapTo(+range.value),800);
+  }
+};
+
+range.value=91.9;
+updateNeedle(91.9);
+stationText.textContent='전원 꺼짐';
 </script>
-
 </body>
 </html>
