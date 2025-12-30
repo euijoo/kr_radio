@@ -29,6 +29,13 @@
 #channelList.open{opacity:1;transform:translateY(0)}
 .channel-item{opacity:0;transform:translateY(6px);transition:.35s}
 #channelList.open .channel-item{opacity:1;transform:translateY(0)}
+
+/* 🔥 iOS 터치 최적화 */
+#freqRange{
+  touch-action:none;
+  -webkit-user-select:none;
+  user-select:none;
+}
 </style>
 </head>
 
@@ -44,7 +51,7 @@
     <div id="scale" class="scale"></div>
     <div id="needle"></div>
     <input id="freqRange" type="range" min="87.5" max="108" step="0.1"
-      class="absolute inset-0 opacity-0 z-20 touch-pan-x">
+      class="absolute inset-0 opacity-0 z-20">
   </div>
 
   <div id="dialInfo">
@@ -97,7 +104,6 @@ function updateNowProgram(){
   const now=new Date();
   let nowMin=now.getHours()*60+now.getMinutes();
   if(now.getHours()<5) nowMin+=1440;
-
   const list=currentSchedule.schedule[dayKey()]||currentSchedule.schedule.weekday;
   for(let i=0;i<list.length;i++){
     const cur=toMin(list[i].time||list[i].start);
@@ -149,7 +155,7 @@ const channels=[
 ]}
 ];
 
-/* ===== UI 로직 (원본 유지) ===== */
+/* ===== UI ===== */
 const scale=document.getElementById('scale');
 for(let f=MIN;f<=MAX+0.001;f+=0.1){
   const t=document.createElement('div');
@@ -183,91 +189,37 @@ function snapTo(freq){
   updateNeedle(nearest.freq);
   if(!power) return;
 
- /* 🔥 핵심: 수신 완료 상태 */
-  noiseGain.gain.value = 0;
+  noiseGain.gain.value=0;
   stereo.classList.add('on');
 
-
-  stereo.classList.add('on');
   audio.src=nearest.url;
   audio.volume=1;
   audio.play();
+
   stationText.textContent=nearest.name;
-
   if(nearest.json) loadSchedule(nearest.json);
-  else { currentSchedule=null; nowProgram.textContent=''; }
+  else{currentSchedule=null;nowProgram.textContent='';}
 }
 
-function closeList(){
-  channelList.style.height = channelList.scrollHeight + 'px';
-  requestAnimationFrame(()=>{
-    channelList.style.height = '0px';
-    channelList.classList.remove('open');
-  });
-}
-
-channels.forEach(g=>{
-  const tab=document.createElement('div');
-  tab.className='tab';
-  tab.textContent=g.group;
-
-  tab.onclick=()=>{
-    if(activeGroup===g){
-      closeList();
-      activeGroup=null;
-      document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-      return;
-    }
-
-    activeGroup=g;
-    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-    tab.classList.add('active');
-
-    channelList.innerHTML='';
-    g.list.forEach(ch=>{
-      const d=document.createElement('div');
-      d.className="channel-item flex justify-between bg-neutral-800 rounded-lg p-3 mb-2 cursor-pointer";
-      d.innerHTML=`<span>${ch.name}</span><span class="text-xs text-gray-400">${ch.freq.toFixed(1)}</span>`;
-      d.onclick=()=>{
-        snapTo(ch.freq);
-        closeList();
-        document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-        activeGroup=null;
-      };
-      channelList.appendChild(d);
-    });
-
-    channelList.classList.add('open');
-    channelList.style.height = channelList.scrollHeight + 'px';
-  };
-
-  tabs.appendChild(tab);
-});
-
-
-range.addEventListener('change',()=>snapTo(+range.value));
 range.addEventListener('input',()=>{
-  ctx.resume(); // 모바일 대응
+  ctx.resume();
   updateNeedle(+range.value);
-
   if(!power){
     noiseGain.gain.value=0;
     stereo.classList.remove('on');
     stationText.textContent='';
     return;
   }
-
-  noiseGain.gain.value=0.05;      // 🔊 스캔 노이즈
+  noiseGain.gain.value=0.05;
   stereo.classList.remove('on');
   stationText.textContent='스캔중...';
 });
-
+range.addEventListener('change',()=>snapTo(+range.value));
 
 powerBtn.onclick=()=>{
-  ctx.resume();   // 🔥 필수
+  ctx.resume();
   power=!power;
   powerBtn.classList.toggle('power-on',power);
-
   if(!power){
     audio.pause();
     noiseGain.gain.value=0;
@@ -281,6 +233,73 @@ powerBtn.onclick=()=>{
   }
 };
 
+/* ===== iOS 터치 감도 보정 ===== */
+let lastTouchX=null;
+const isIOS=/iPhone|iPad|iPod/i.test(navigator.userAgent);
+if(isIOS){
+  range.addEventListener('touchstart',e=>{
+    lastTouchX=e.touches[0].clientX;
+  });
+  range.addEventListener('touchmove',e=>{
+    e.preventDefault();
+    if(lastTouchX===null) return;
+    const x=e.touches[0].clientX;
+    const dx=x-lastTouchX;
+    lastTouchX=x;
+    const sensitivity=0.015;
+    let v=parseFloat(range.value);
+    v+=dx*sensitivity;
+    v=Math.max(MIN,Math.min(MAX,v));
+    range.value=v.toFixed(1);
+    range.dispatchEvent(new Event('input'));
+  },{passive:false});
+  range.addEventListener('touchend',()=>{
+    lastTouchX=null;
+    range.dispatchEvent(new Event('change'));
+  });
+}
+
+/* ===== 채널 리스트 ===== */
+function closeList(){
+  channelList.style.height=channelList.scrollHeight+'px';
+  requestAnimationFrame(()=>{
+    channelList.style.height='0px';
+    channelList.classList.remove('open');
+  });
+}
+
+channels.forEach(g=>{
+  const tab=document.createElement('div');
+  tab.className='tab';
+  tab.textContent=g.group;
+  tab.onclick=()=>{
+    if(activeGroup===g){
+      closeList();
+      activeGroup=null;
+      document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+      return;
+    }
+    activeGroup=g;
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');
+    channelList.innerHTML='';
+    g.list.forEach(ch=>{
+      const d=document.createElement('div');
+      d.className="channel-item flex justify-between bg-neutral-800 rounded-lg p-3 mb-2 cursor-pointer";
+      d.innerHTML=`<span>${ch.name}</span><span class="text-xs text-gray-400">${ch.freq.toFixed(1)}</span>`;
+      d.onclick=()=>{
+        snapTo(ch.freq);
+        closeList();
+        activeGroup=null;
+        document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+      };
+      channelList.appendChild(d);
+    });
+    channelList.classList.add('open');
+    channelList.style.height=channelList.scrollHeight+'px';
+  };
+  tabs.appendChild(tab);
+});
 
 range.value=91.9;
 updateNeedle(91.9);
@@ -289,4 +308,3 @@ stationText.textContent='전원 꺼짐';
 
 </body>
 </html>
- 
