@@ -7,225 +7,148 @@
 <script src="https://cdn.tailwindcss.com"></script>
 
 <style>
-#dial{height:220px}
+#dial{--dial-height:220px;height:var(--dial-height)}
 .scale{position:absolute;inset:0;display:flex;align-items:flex-end;padding:0 12px}
 .tick{width:6px;height:100%;position:relative}
 .tick::before{content:"";position:absolute;bottom:0;left:50%;transform:translateX(-50%)}
-.tick.small::before{width:1px;height:35%;background:#666}
-.tick.mid::before{width:1px;height:55%;background:#aaa}
-.tick.big::before{width:2px;height:85%;background:#fff}
-.tick.big span{position:absolute;bottom:90%;left:50%;transform:translateX(-50%);font-size:10px}
-
-#needle{position:absolute;top:-12px;width:3px;height:244px;background:#facc15;box-shadow:0 0 12px #facc15;z-index:10}
-
-.stereo{width:10px;height:10px;border-radius:50%;background:#0f0;box-shadow:0 0 8px #0f0;opacity:0}
+.tick.small::before{width:1px;height:35%;background:#e5e5e5;opacity:.6}
+.tick.mid::before{width:1px;height:55%;background:#f0f0f0;opacity:.8}
+.tick.big::before{width:2px;height:85%;background:#fff;opacity:.95}
+.tick.big span{position:absolute;bottom:calc(85% + 6px);left:50%;transform:translateX(-50%);font-size:10px;color:#e0e0e0}
+#needle{position:absolute;top:-12px;width:3px;height:calc(var(--dial-height) + 24px);background:linear-gradient(#ffd700,#ffae00);box-shadow:0 0 12px rgba(255,215,0,.9);z-index:10}
+#dialInfo{padding:10px 12px 0}
+#freqText{font-size:32px;font-weight:600}
+#stationText{font-size:13px;color:#9ca3af;margin-top:4px}
+.stereo{width:10px;height:10px;border-radius:50%;background:#0f0;box-shadow:0 0 10px #0f0;opacity:0;transition:.3s}
 .stereo.on{opacity:1}
-
-.tab{cursor:pointer;color:#aaa;padding-bottom:4px}
-.tab.active{color:#fff;border-bottom:2px solid #facc15}
-
-#channelList{overflow:hidden;height:0;transition:.4s}
-.channel{padding:10px;background:#222;border-radius:8px;margin-bottom:6px;cursor:pointer}
 </style>
 </head>
 
 <body class="bg-neutral-900 text-white max-w-md mx-auto">
 
-<header class="flex justify-between p-4">
-  <span class="font-semibold">FM Radio</span>
+<header class="flex justify-between items-center px-4 py-3 text-lg font-semibold">
+  <span>FM Radio</span>
   <button id="powerBtn" class="w-9 h-9 rounded-full bg-neutral-700"></button>
 </header>
 
 <div class="px-4">
-  <div id="dial" class="relative bg-neutral-800 rounded-xl overflow-hidden">
+  <div id="dial" class="relative rounded-xl overflow-hidden bg-gradient-to-b from-neutral-800 to-neutral-900">
     <div id="scale" class="scale"></div>
     <div id="needle"></div>
-    <input id="range" type="range" min="87.5" max="108" step="0.1"
-      class="absolute inset-0 opacity-0">
+    <input id="freqRange" type="range" min="87.5" max="108" step="0.1"
+      class="absolute inset-0 opacity-0 z-20 touch-pan-x">
   </div>
 
-  <div class="mt-3">
-    <div id="freqText" class="text-3xl"></div>
-    <div id="programText" class="text-sm text-gray-400"></div>
+  <div id="dialInfo">
+    <div id="freqText"></div>
+    <div id="stationText"></div>
+
+    <!-- ✅ 현재 방송 제목 -->
+    <div id="nowProgram" class="text-xs text-gray-300 mt-1">
+      방송 정보 없음
+    </div>
   </div>
 
-  <div class="flex justify-end mt-2">
-    <div id="stereo" class="stereo"></div>
+  <div class="flex justify-end mt-3">
+    <div id="stereoLamp" class="stereo"></div>
   </div>
 </div>
 
-<div id="tabs" class="flex justify-around mt-6"></div>
-<div id="channelList" class="px-4"></div>
-
 <script>
-/* ================= AUDIO ================= */
-const AudioCtx = window.AudioContext || window.webkitAudioContext;
-const ctx = new AudioCtx();
+/* ===============================
+   AUDIO CORE
+================================ */
 const audio = new Audio();
+const ctx = new (window.AudioContext||window.webkitAudioContext)();
 
-const noiseGain = ctx.createGain();
-noiseGain.gain.value = 0;
-noiseGain.connect(ctx.destination);
+const freqRange = document.getElementById("freqRange");
+const freqText = document.getElementById("freqText");
+const stationText = document.getElementById("stationText");
+const nowProgram = document.getElementById("nowProgram");
 
-const buffer = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
-const data = buffer.getChannelData(0);
-for (let i = 0; i < data.length; i++) data[i] = (Math.random()*2-1)*0.4;
-
-const noise = ctx.createBufferSource();
-noise.buffer = buffer;
-noise.loop = true;
-noise.connect(noiseGain);
-noise.start();
-
-/* ================= UI ================= */
-const MIN=87.5, MAX=108;
-const dial=document.getElementById('dial');
-const scale=document.getElementById('scale');
-const needle=document.getElementById('needle');
-const range=document.getElementById('range');
-const freqText=document.getElementById('freqText');
-const programText=document.getElementById('programText');
-const stereo=document.getElementById('stereo');
-const powerBtn=document.getElementById('powerBtn');
-const tabs=document.getElementById('tabs');
-const channelList=document.getElementById('channelList');
-
-let power=false;
-let activeGroup=null;
-let currentChannel=null;
-
-/* ================= SCALE ================= */
-for(let f=MIN; f<=MAX; f+=0.1){
-  const t=document.createElement('div');
-  const d=Math.round((f*10)%10);
-  t.className='tick '+(d===0?'big':d===5?'mid':'small');
-  if(d===0) t.innerHTML=`<span>${Math.round(f)}</span>`;
-  scale.appendChild(t);
-}
-
-/* ================= CHANNEL DATA ================= */
-const channels=[
-{group:'SBS',items:[
-{name:'SBS 파워FM',freq:107.7,stream:'https://radio.bsod.kr/stream/?stn=sbs&ch=powerfm',json:'schedules/sbs-powerfm.json'},
-{name:'SBS 러브FM',freq:103.5,stream:'https://radio.bsod.kr/stream/?stn=sbs&ch=lovefm',json:'schedules/sbs-lovefm.json'}
-]},
-{group:'MBC',items:[
-{name:'MBC FM4U',freq:91.9,stream:'https://radio.bsod.kr/stream/?stn=mbc&ch=fm4u',json:'schedules/mbc-fm4u.json'},
-{name:'MBC 표준FM',freq:95.9,stream:'https://radio.bsod.kr/stream/?stn=mbc&ch=sfm',json:'schedules/mbc-sfm.json'}
-]},
-{group:'KBS',items:[
-{name:'KBS 1라디오',freq:97.3,stream:'https://radio.bsod.kr/stream/?stn=kbs&ch=1radio',json:'schedules/kbs-1radio.json'},
-{name:'KBS 2FM',freq:89.1,stream:'https://radio.bsod.kr/stream/?stn=kbs&ch=2fm',json:'schedules/kbs-2fm.json'}
-]},
-{group:'ETC',items:[
-{name:'EBS FM',freq:104.5,stream:'https://radio.bsod.kr/stream/?stn=ebs',json:'schedules/ebs-fm.json'}
-]}
+/* ===============================
+   CHANNEL DATA
+================================ */
+const channels = [
+{ name:'SBS 파워FM', freq:107.7, url:'https://radio.bsod.kr/stream/?stn=sbs&ch=powerfm', json:'schedule/sbs-powerfm.json' },
+{ name:'SBS 러브FM', freq:103.5, url:'https://radio.bsod.kr/stream/?stn=sbs&ch=lovefm', json:'schedule/sbs-lovefm.json' },
+{ name:'MBC FM4U', freq:91.9, url:'https://radio.bsod.kr/stream/?stn=mbc&ch=fm4u', json:'schedule/mbc-fm4u.json' },
+{ name:'MBC 표준FM', freq:95.9, url:'https://radio.bsod.kr/stream/?stn=mbc&ch=sfm', json:'schedule/mbc-standardfm.json' },
+{ name:'KBS 1라디오', freq:97.3, url:'https://radio.bsod.kr/stream/?stn=kbs&ch=1radio', json:'schedule/kbs-1radio.json' },
+{ name:'KBS 쿨FM', freq:89.1, url:'https://radio.bsod.kr/stream/?stn=kbs&ch=2fm', json:'schedule/kbs-coolfm.json' }
 ];
 
-/* ================= FUNCTIONS ================= */
-function updateNeedle(f){
-  needle.style.left=((f-MIN)/(MAX-MIN)*dial.clientWidth)+'px';
-  freqText.textContent=f.toFixed(1)+' MHz';
-}
+/* ===============================
+   SCHEDULE LOGIC
+================================ */
+let currentSchedule = null;
 
-async function loadProgram(channel){
+async function loadSchedule(path){
   try{
-    const r=await fetch(channel.json);
-    const j=await r.json();
-    const now=new Date();
-    const mins=now.getHours()*60+now.getMinutes();
-    let cur=j.schedule.weekday[0];
-    j.schedule.weekday.forEach(p=>{
-      const [h,m]=p.start.split(':').map(Number);
-      if(mins>=h*60+m) cur=p;
-    });
-    programText.textContent=cur.title;
+    const r = await fetch(path);
+    currentSchedule = await r.json();
+    updateNowProgram();
   }catch{
-    programText.textContent=channel.name;
+    nowProgram.textContent = "방송 정보 없음";
   }
 }
 
-function tuneChannel(channel){
-  currentChannel=channel;
-  range.value=channel.freq;
-  updateNeedle(channel.freq);
-  if(!power) return;
-
-  noiseGain.gain.value=0;
-  stereo.classList.add('on');
-
-  audio.src=channel.stream;
-  audio.play();
-  loadProgram(channel);
+function dayKey(){
+  const d = new Date().getDay();
+  if(d===6) return "saturday";
+  if(d===0) return "sunday";
+  return "weekday";
 }
 
-/* ================= SCAN ================= */
-function scan(freq){
-  const flat=channels.flatMap(g=>g.items);
-  const nearest=flat.reduce((a,b)=>Math.abs(b.freq-freq)<Math.abs(a.freq-freq)?b:a);
-  tuneChannel(nearest);
+function toMin(t){
+  let [h,m]=t.split(":").map(Number);
+  if(h<5) h+=24;
+  return h*60+m;
 }
 
-/* ================= TABS ================= */
-channels.forEach(g=>{
-  const tab=document.createElement('div');
-  tab.className='tab';
-  tab.textContent=g.group;
-  tab.onclick=()=>{
-    if(activeGroup===g){
-      channelList.style.height=0;
-      activeGroup=null;
-      tab.classList.remove('active');
+function updateNowProgram(){
+  if(!currentSchedule) return;
+
+  const now = new Date();
+  let nowMin = now.getHours()*60 + now.getMinutes();
+  if(now.getHours()<5) nowMin+=1440;
+
+  const sch = currentSchedule.schedule[dayKey()] || currentSchedule.schedule.weekday;
+
+  for(let i=0;i<sch.length;i++){
+    const cur = toMin(sch[i].time || sch[i].start);
+    const next = sch[i+1] ? toMin(sch[i+1].time || sch[i+1].start) : 9999;
+    if(nowMin>=cur && nowMin<next){
+      nowProgram.textContent = sch[i].title;
       return;
     }
-    activeGroup=g;
-    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-    tab.classList.add('active');
-    channelList.innerHTML='';
-    g.items.forEach(ch=>{
-      const d=document.createElement('div');
-      d.className='channel';
-      d.textContent=`${ch.name} ${ch.freq}`;
-      d.onclick=()=>{tuneChannel(ch);channelList.style.height=0;};
-      channelList.appendChild(d);
-    });
-    channelList.style.height=channelList.scrollHeight+'px';
-  };
-  tabs.appendChild(tab);
+  }
+  nowProgram.textContent = "방송 정보 없음";
+}
+
+setInterval(updateNowProgram,60000);
+
+/* ===============================
+   TUNING
+================================ */
+function snapTo(freq){
+  freqText.textContent = freq.toFixed(1) + " MHz";
+
+  const ch = channels.reduce((a,b)=>
+    Math.abs(b.freq-freq) < Math.abs(a.freq-freq) ? b : a
+  );
+
+  audio.src = ch.url;
+  audio.play();
+
+  stationText.textContent = ch.name;
+  loadSchedule(ch.json);
+}
+
+freqRange.addEventListener("input", e=>{
+  snapTo(parseFloat(e.target.value));
 });
-
-/* ================= EVENTS ================= */
-range.oninput=()=>{
-  updateNeedle(+range.value);
-  if(power){
-    noiseGain.gain.value=0.05;
-    stereo.classList.remove('on');
-    programText.textContent='스캔 중...';
-  }
-};
-
-range.onchange=()=>scan(+range.value);
-
-powerBtn.onclick=async()=>{
-  await ctx.resume();
-  power=!power;
-  powerBtn.style.background=power?'#facc15':'#444';
-  if(!power){
-    audio.pause();
-    noiseGain.gain.value=0;
-    stereo.classList.remove('on');
-    programText.textContent='전원 꺼짐';
-  }else{
-    noiseGain.gain.value=0.05;
-    programText.textContent='예열 중...';
-    setTimeout(()=>scan(+range.value),600);
-  }
-};
-
-/* ================= INIT ================= */
-range.value=91.9;
-updateNeedle(91.9);
-programText.textContent='전원 꺼짐';
 </script>
+
 </body>
 </html>
