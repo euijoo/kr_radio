@@ -7,6 +7,12 @@
 <script src="https://cdn.tailwindcss.com"></script>
 
 <style>
+html, body{
+  height:100%;
+  overflow:hidden;
+  overscroll-behavior:none;
+}
+
 body{
   background-image:url('./bg-radio.png');
   background-size:cover;
@@ -43,6 +49,15 @@ body{
   -webkit-user-select:none;
   user-select:none;
 }
+
+/* 🔒 텍스트 선택 방지 (앱처럼) */
+*{
+  -webkit-user-select:none; /* iOS Safari */
+  -ms-user-select:none;
+  user-select:none;
+  -webkit-tap-highlight-color:transparent;
+}
+
 </style>
 </head>
 
@@ -76,6 +91,10 @@ body{
 <div id="channelList" class="px-4 py-4"></div>
 
 <script>
+document.addEventListener('touchmove', function(e){
+  e.preventDefault();
+}, { passive:false });
+
 const MIN=87.5, MAX=108;
 const audio=new Audio();
 const ctx=new (window.AudioContext||window.webkitAudioContext)();
