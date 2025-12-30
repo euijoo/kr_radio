@@ -11,21 +11,21 @@
 .scale{position:absolute;inset:0;display:flex;align-items:flex-end;padding:0 12px}
 .tick{width:6px;height:100%;position:relative}
 .tick::before{content:"";position:absolute;bottom:0;left:50%;transform:translateX(-50%)}
-.tick.small::before{width:1px;height:35%;background:#777}
-.tick.mid::before{width:1px;height:55%;background:#bbb}
+.tick.small::before{width:1px;height:35%;background:#666}
+.tick.mid::before{width:1px;height:55%;background:#aaa}
 .tick.big::before{width:2px;height:85%;background:#fff}
-.tick.big span{position:absolute;bottom:90%;left:50%;transform:translateX(-50%);font-size:10px;color:#eee}
+.tick.big span{position:absolute;bottom:90%;left:50%;transform:translateX(-50%);font-size:10px}
 
-#needle{position:absolute;top:-12px;width:3px;height:244px;background:#facc15;box-shadow:0 0 10px #facc15;z-index:10}
+#needle{position:absolute;top:-12px;width:3px;height:244px;background:#facc15;box-shadow:0 0 12px #facc15;z-index:10}
 
 .stereo{width:10px;height:10px;border-radius:50%;background:#0f0;box-shadow:0 0 8px #0f0;opacity:0}
 .stereo.on{opacity:1}
 
-#channelList{overflow:hidden;height:0;transition:.4s}
-#channelList.open{padding-top:12px}
-.channel{padding:10px;background:#222;border-radius:8px;margin-bottom:6px;cursor:pointer}
 .tab{cursor:pointer;color:#aaa}
 .tab.active{color:#fff;border-bottom:2px solid #facc15}
+
+#channelList{overflow:hidden;height:0;transition:.4s}
+.channel{padding:10px;background:#222;border-radius:8px;margin-bottom:6px;cursor:pointer}
 </style>
 </head>
 
@@ -33,7 +33,7 @@
 
 <header class="flex justify-between p-4">
   <span class="font-semibold">FM Radio</span>
-  <button id="powerBtn" class="w-8 h-8 rounded-full bg-neutral-700"></button>
+  <button id="powerBtn" class="w-9 h-9 rounded-full bg-neutral-700"></button>
 </header>
 
 <div class="px-4">
@@ -58,6 +58,26 @@
 <div id="channelList" class="px-4"></div>
 
 <script>
+/* ================== AUDIO ================== */
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+const ctx = new AudioCtx();
+const audio = new Audio();
+
+const noiseGain = ctx.createGain();
+noiseGain.gain.value = 0;
+noiseGain.connect(ctx.destination);
+
+const buffer = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
+const data = buffer.getChannelData(0);
+for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * 0.4;
+
+const noise = ctx.createBufferSource();
+noise.buffer = buffer;
+noise.loop = true;
+noise.connect(noiseGain);
+noise.start();
+
+/* ================== UI ================== */
 const MIN=87.5, MAX=108;
 const dial=document.getElementById('dial');
 const scale=document.getElementById('scale');
@@ -70,11 +90,10 @@ const powerBtn=document.getElementById('powerBtn');
 const tabs=document.getElementById('tabs');
 const channelList=document.getElementById('channelList');
 
-const audio=new Audio();
+let power=false;
+let activeGroup=null;
 
-let power=false, activeGroup=null;
-
-/* 눈금 생성 */
+/* ================== SCALE ================== */
 for(let f=MIN; f<=MAX; f+=0.1){
   const t=document.createElement('div');
   const d=Math.round((f*10)%10);
@@ -83,29 +102,36 @@ for(let f=MIN; f<=MAX; f+=0.1){
   scale.appendChild(t);
 }
 
-/* 방송국 */
+/* ================== CHANNELS ================== */
 const channels=[
-{group:'KBS',list:[
-{name:'KBS 1라디오',freq:97.3,url:'https://radio.bsod.kr/stream/?stn=kbs&ch=1radio',json:'schedules/kbs-1radio.json'},
-{name:'KBS 2FM',freq:89.1,url:'https://radio.bsod.kr/stream/?stn=kbs&ch=2fm',json:'schedules/kbs-coolfm.json'}
+{group:'SBS',list:[
+{name:'SBS 파워FM',freq:107.7,url:'https://radio.bsod.kr/stream/?stn=sbs&ch=powerfm',json:'schedules/sbs-powerfm.json'},
+{name:'SBS 러브FM',freq:103.5,url:'https://radio.bsod.kr/stream/?stn=sbs&ch=lovefm',json:'schedules/sbs-lovefm.json'}
 ]},
 {group:'MBC',list:[
-{name:'MBC FM4U',freq:91.9,url:'https://radio.bsod.kr/stream/?stn=mbc&ch=fm4u',json:'schedules/mbc-fm4u.json'}
+{name:'MBC FM4U',freq:91.9,url:'https://radio.bsod.kr/stream/?stn=mbc&ch=fm4u',json:'schedules/mbc-fm4u.json'},
+{name:'MBC 표준FM',freq:95.9,url:'https://radio.bsod.kr/stream/?stn=mbc&ch=sfm',json:'schedules/mbc-sfm.json'}
 ]},
-{group:'SBS',list:[
-{name:'SBS 파워FM',freq:107.7,url:'https://radio.bsod.kr/stream/?stn=sbs&ch=powerfm',json:'schedules/sbs-powerfm.json'}
+{group:'KBS',list:[
+{name:'KBS 1라디오',freq:97.3,url:'https://radio.bsod.kr/stream/?stn=kbs&ch=1radio',json:'schedules/kbs-1radio.json'},
+{name:'KBS 2FM',freq:89.1,url:'https://radio.bsod.kr/stream/?stn=kbs&ch=2fm',json:'schedules/kbs-2fm.json'}
 ]}
 ];
 
-/* 현재 방송 제목 */
+/* ================== FUNCTIONS ================== */
+function updateNeedle(f){
+  needle.style.left=((f-MIN)/(MAX-MIN)*dial.clientWidth)+'px';
+  freqText.textContent=f.toFixed(1)+' MHz';
+}
+
 async function loadProgram(ch){
   try{
-    const res=await fetch(ch.json);
-    const data=await res.json();
+    const r=await fetch(ch.json);
+    const j=await r.json();
     const now=new Date();
     const m=now.getHours()*60+now.getMinutes();
-    let cur=data.schedule.weekday[0];
-    data.schedule.weekday.forEach(p=>{
+    let cur=j.schedule.weekday[0];
+    j.schedule.weekday.forEach(p=>{
       const [h,mi]=p.start.split(':').map(Number);
       if(m>=h*60+mi) cur=p;
     });
@@ -115,30 +141,26 @@ async function loadProgram(ch){
   }
 }
 
-/* 바늘 */
-function updateNeedle(f){
-  needle.style.left=((f-MIN)/(MAX-MIN)*dial.clientWidth)+'px';
-  freqText.textContent=f.toFixed(1)+' MHz';
-}
-
-/* 스냅 */
-function tune(f){
+function tune(freq){
   const all=channels.flatMap(g=>g.list);
-  const ch=all.reduce((a,b)=>Math.abs(b.freq-f)<Math.abs(a.freq-f)?b:a);
+  const ch=all.reduce((a,b)=>Math.abs(b.freq-freq)<Math.abs(a.freq-freq)?b:a);
   range.value=ch.freq;
   updateNeedle(ch.freq);
   if(!power) return;
+
+  noiseGain.gain.value=0;
+  stereo.classList.add('on');
+
   audio.src=ch.url;
   audio.play();
-  stereo.classList.add('on');
   loadProgram(ch);
 }
 
-/* 탭 */
+/* ================== TABS ================== */
 channels.forEach(g=>{
   const t=document.createElement('div');
-  t.textContent=g.group;
   t.className='tab';
+  t.textContent=g.group;
   t.onclick=()=>{
     if(activeGroup===g){
       channelList.style.height=0;
@@ -162,14 +184,32 @@ channels.forEach(g=>{
   tabs.appendChild(t);
 });
 
-/* 이벤트 */
-range.oninput=()=>updateNeedle(+range.value);
+/* ================== EVENTS ================== */
+range.oninput=()=>{
+  updateNeedle(+range.value);
+  if(power){
+    noiseGain.gain.value=0.05;
+    stereo.classList.remove('on');
+    programText.textContent='스캔 중...';
+  }
+};
+
 range.onchange=()=>tune(+range.value);
 
-powerBtn.onclick=()=>{
+powerBtn.onclick=async()=>{
+  await ctx.resume();
   power=!power;
   powerBtn.style.background=power?'#facc15':'#444';
-  if(!power){audio.pause();programText.textContent='전원 꺼짐';stereo.classList.remove('on')}
+  if(!power){
+    audio.pause();
+    noiseGain.gain.value=0;
+    stereo.classList.remove('on');
+    programText.textContent='전원 꺼짐';
+  }else{
+    noiseGain.gain.value=0.05;
+    programText.textContent='예열 중...';
+    setTimeout(()=>tune(+range.value),600);
+  }
 };
 
 range.value=91.9;
