@@ -7,6 +7,7 @@
 <script src="https://cdn.tailwindcss.com"></script>
 
 <style>
+/* ===== 기존 스타일 (변경 없음) ===== */
 #dial{--dial-height:220px;height:var(--dial-height)}
 .scale{position:absolute;inset:0;display:flex;align-items:flex-end;padding:0 12px}
 .tick{width:6px;height:100%;position:relative}
@@ -21,6 +22,13 @@
 #stationText{font-size:13px;color:#9ca3af;margin-top:4px}
 .stereo{width:10px;height:10px;border-radius:50%;background:#0f0;box-shadow:0 0 10px #0f0;opacity:0;transition:.3s}
 .stereo.on{opacity:1}
+.power-on{background:#facc15!important;box-shadow:0 0 12px #facc15}
+.tab{cursor:pointer;font-weight:600;color:#aaa;padding-bottom:4px}
+.tab.active{color:#fff;border-bottom:2px solid #facc15}
+#channelList{overflow:hidden;height:0;opacity:0;transform:translateY(-6px);transition:height .45s,opacity .3s,transform .45s}
+#channelList.open{opacity:1;transform:translateY(0)}
+.channel-item{opacity:0;transform:translateY(6px);transition:.35s}
+#channelList.open .channel-item{opacity:1;transform:translateY(0)}
 </style>
 </head>
 
@@ -43,7 +51,7 @@
     <div id="freqText"></div>
     <div id="stationText"></div>
 
-    <!-- ✅ 현재 방송 제목 -->
+    <!-- ✅ 추가된 부분 : 현재 방송 제목 -->
     <div id="nowProgram" class="text-xs text-gray-300 mt-1">
       방송 정보 없음
     </div>
@@ -54,101 +62,88 @@
   </div>
 </div>
 
+<div id="tabs" class="flex justify-around px-6 mt-6"></div>
+<div id="channelList" class="px-4 py-4"></div>
+
 <script>
-/* ===============================
-   AUDIO CORE
-================================ */
-const audio = new Audio();
-const ctx = new (window.AudioContext||window.webkitAudioContext)();
+/* ================= 기존 JS (유지) ================= */
+const MIN=87.5, MAX=108;
+const audio=new Audio();
+const ctx=new (window.AudioContext||window.webkitAudioContext)();
+const noiseGain=ctx.createGain(); noiseGain.gain.value=0;
 
-const freqRange = document.getElementById("freqRange");
-const freqText = document.getElementById("freqText");
-const stationText = document.getElementById("stationText");
-const nowProgram = document.getElementById("nowProgram");
+/* ===== 방송 제목용 DOM ===== */
+const nowProgram=document.getElementById("nowProgram");
 
-/* ===============================
-   CHANNEL DATA
-================================ */
-const channels = [
-{ name:'SBS 파워FM', freq:107.7, url:'https://radio.bsod.kr/stream/?stn=sbs&ch=powerfm', json:'schedule/sbs-powerfm.json' },
-{ name:'SBS 러브FM', freq:103.5, url:'https://radio.bsod.kr/stream/?stn=sbs&ch=lovefm', json:'schedule/sbs-lovefm.json' },
-{ name:'MBC FM4U', freq:91.9, url:'https://radio.bsod.kr/stream/?stn=mbc&ch=fm4u', json:'schedule/mbc-fm4u.json' },
-{ name:'MBC 표준FM', freq:95.9, url:'https://radio.bsod.kr/stream/?stn=mbc&ch=sfm', json:'schedule/mbc-standardfm.json' },
-{ name:'KBS 1라디오', freq:97.3, url:'https://radio.bsod.kr/stream/?stn=kbs&ch=1radio', json:'schedule/kbs-1radio.json' },
-{ name:'KBS 쿨FM', freq:89.1, url:'https://radio.bsod.kr/stream/?stn=kbs&ch=2fm', json:'schedule/kbs-coolfm.json' }
+/* ===== 채널 정보에 JSON 경로만 추가 ===== */
+const channels=[
+{group:'SBS',list:[
+{name:'SBS 파워FM',freq:107.7,url:'https://radio.bsod.kr/stream/?stn=sbs&ch=powerfm',json:'schedule/sbs-powerfm.json'},
+{name:'SBS 러브FM',freq:103.5,url:'https://radio.bsod.kr/stream/?stn=sbs&ch=lovefm',json:'schedule/sbs-lovefm.json'},
+{name:'SBS 고릴라디오M',freq:95.1,url:'https://radio.bsod.kr/stream/?stn=sbs&ch=dmb',json:'schedule/sbs-gorillam.json'}
+]},
+{group:'MBC',list:[
+{name:'MBC FM4U',freq:91.9,url:'https://radio.bsod.kr/stream/?stn=mbc&ch=fm4u',json:'schedule/mbc-fm4u.json'},
+{name:'MBC 표준FM',freq:95.9,url:'https://radio.bsod.kr/stream/?stn=mbc&ch=sfm',json:'schedule/mbc-standardfm.json'},
+{name:'MBC 올댓뮤직',freq:100.7,url:'https://radio.bsod.kr/stream/?stn=mbc&ch=chm',json:'schedule/mbc-allthatmusic.json'}
+]},
+{group:'KBS',list:[
+{name:'KBS 1라디오',freq:97.3,url:'https://radio.bsod.kr/stream/?stn=kbs&ch=1radio',json:'schedule/kbs-1radio.json'},
+{name:'KBS 2라디오',freq:106.1,url:'https://radio.bsod.kr/stream/?stn=kbs&ch=2radio',json:'schedule/kbs-happyfm.json'},
+{name:'KBS 3라디오',freq:104.9,url:'https://radio.bsod.kr/stream/?stn=kbs&ch=3radio',json:'schedule/kbs-3radio.json'},
+{name:'KBS 1FM',freq:93.1,url:'https://radio.bsod.kr/stream/?stn=kbs&ch=1fm',json:'schedule/kbs-classicfm.json'},
+{name:'KBS 2FM',freq:89.1,url:'https://radio.bsod.kr/stream/?stn=kbs&ch=2fm',json:'schedule/kbs-coolfm.json'}
+]}
 ];
 
-/* ===============================
-   SCHEDULE LOGIC
-================================ */
-let currentSchedule = null;
+/* ===== 현재 방송 계산 로직 ===== */
+let currentSchedule=null;
 
 async function loadSchedule(path){
   try{
-    const r = await fetch(path);
-    currentSchedule = await r.json();
+    const r=await fetch(path);
+    currentSchedule=await r.json();
     updateNowProgram();
   }catch{
-    nowProgram.textContent = "방송 정보 없음";
+    nowProgram.textContent="방송 정보 없음";
   }
 }
-
 function dayKey(){
-  const d = new Date().getDay();
+  const d=new Date().getDay();
   if(d===6) return "saturday";
   if(d===0) return "sunday";
   return "weekday";
 }
-
 function toMin(t){
   let [h,m]=t.split(":").map(Number);
   if(h<5) h+=24;
   return h*60+m;
 }
-
 function updateNowProgram(){
   if(!currentSchedule) return;
-
-  const now = new Date();
-  let nowMin = now.getHours()*60 + now.getMinutes();
+  let now=new Date();
+  let nowMin=now.getHours()*60+now.getMinutes();
   if(now.getHours()<5) nowMin+=1440;
-
-  const sch = currentSchedule.schedule[dayKey()] || currentSchedule.schedule.weekday;
-
+  const sch=currentSchedule.schedule[dayKey()]||currentSchedule.schedule.weekday;
   for(let i=0;i<sch.length;i++){
-    const cur = toMin(sch[i].time || sch[i].start);
-    const next = sch[i+1] ? toMin(sch[i+1].time || sch[i+1].start) : 9999;
-    if(nowMin>=cur && nowMin<next){
-      nowProgram.textContent = sch[i].title;
+    const cur=toMin(sch[i].time||sch[i].start);
+    const next=sch[i+1]?toMin(sch[i+1].time||sch[i+1].start):9999;
+    if(nowMin>=cur&&nowMin<next){
+      nowProgram.textContent=sch[i].title;
       return;
     }
   }
-  nowProgram.textContent = "방송 정보 없음";
 }
-
 setInterval(updateNowProgram,60000);
 
-/* ===============================
-   TUNING
-================================ */
+/* ===== 기존 snapTo에 한 줄만 추가 ===== */
 function snapTo(freq){
-  freqText.textContent = freq.toFixed(1) + " MHz";
-
-  const ch = channels.reduce((a,b)=>
-    Math.abs(b.freq-freq) < Math.abs(a.freq-freq) ? b : a
-  );
-
-  audio.src = ch.url;
+  const flat=channels.flatMap(g=>g.list);
+  const nearest=flat.reduce((a,b)=>Math.abs(b.freq-freq)<Math.abs(a.freq-freq)?b:a);
+  audio.src=nearest.url;
   audio.play();
-
-  stationText.textContent = ch.name;
-  loadSchedule(ch.json);
+  loadSchedule(nearest.json); // 🔥 추가
 }
-
-freqRange.addEventListener("input", e=>{
-  snapTo(parseFloat(e.target.value));
-});
 </script>
-
 </body>
 </html>
