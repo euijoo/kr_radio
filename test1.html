@@ -183,6 +183,11 @@ function snapTo(freq){
   updateNeedle(nearest.freq);
   if(!power) return;
 
+ /* 🔥 핵심: 수신 완료 상태 */
+  noiseGain.gain.value = 0;
+  stereo.classList.add('on');
+
+
   stereo.classList.add('on');
   audio.src=nearest.url;
   audio.volume=1;
@@ -241,20 +246,41 @@ channels.forEach(g=>{
 
 
 range.addEventListener('change',()=>snapTo(+range.value));
+range.addEventListener('input',()=>{
+  ctx.resume(); // 모바일 대응
+  updateNeedle(+range.value);
+
+  if(!power){
+    noiseGain.gain.value=0;
+    stereo.classList.remove('on');
+    stationText.textContent='';
+    return;
+  }
+
+  noiseGain.gain.value=0.05;      // 🔊 스캔 노이즈
+  stereo.classList.remove('on');
+  stationText.textContent='스캔중...';
+});
+
 
 powerBtn.onclick=()=>{
+  ctx.resume();   // 🔥 필수
   power=!power;
   powerBtn.classList.toggle('power-on',power);
+
   if(!power){
     audio.pause();
+    noiseGain.gain.value=0;
     stereo.classList.remove('on');
     stationText.textContent='전원 꺼짐';
     nowProgram.textContent='';
   }else{
     stationText.textContent='예열중...';
+    noiseGain.gain.value=0.05;
     setTimeout(()=>snapTo(+range.value),800);
   }
 };
+
 
 range.value=91.9;
 updateNeedle(91.9);
