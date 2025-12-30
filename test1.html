@@ -2,232 +2,228 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>FM Radio</title>
-<script src="https://cdn.tailwindcss.com"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Radio Dial</title>
 
 <style>
-#dial{--dial-height:220px;height:var(--dial-height)}
-.scale{position:absolute;inset:0;display:flex;align-items:flex-end;padding:0 12px}
-.tick{width:6px;height:100%;position:relative}
-.tick::before{content:"";position:absolute;bottom:0;left:50%;transform:translateX(-50%)}
-.tick.small::before{width:1px;height:35%;background:#e5e5e5;opacity:.6}
-.tick.mid::before{width:1px;height:55%;background:#f0f0f0;opacity:.8}
-.tick.big::before{width:2px;height:85%;background:#fff;opacity:.95}
-.tick.big span{position:absolute;bottom:calc(85% + 6px);left:50%;transform:translateX(-50%);font-size:10px;color:#e0e0e0}
-#needle{position:absolute;top:-12px;width:3px;height:calc(var(--dial-height) + 24px);background:linear-gradient(#ffd700,#ffae00);box-shadow:0 0 12px rgba(255,215,0,.9);z-index:10}
-#dialInfo{padding:10px 12px 0}
-#freqText{font-size:32px;font-weight:600}
-#stationText{font-size:13px;color:#9ca3af;margin-top:4px}
-.stereo{width:10px;height:10px;border-radius:50%;background:#0f0;box-shadow:0 0 10px #0f0;opacity:0;transition:.3s}
-.stereo.on{opacity:1}
-.power-on{background:#facc15!important;box-shadow:0 0 12px #facc15}
-.tab{cursor:pointer;font-weight:600;color:#aaa;padding-bottom:4px}
-.tab.active{color:#fff;border-bottom:2px solid #facc15}
-#channelList{overflow:hidden;height:0;opacity:0;transform:translateY(-6px);transition:height .45s cubic-bezier(.4,0,.2,1),opacity .3s,transform .45s}
-#channelList.open{opacity:1;transform:translateY(0)}
-.channel-item{opacity:0;transform:translateY(6px);transition:.35s}
-#channelList.open .channel-item{opacity:1;transform:translateY(0)}
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #f5f5f7;
+  color: #111;
+}
+
+header {
+  padding: 14px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 18px;
+}
+
+#dial {
+  position: relative;
+  height: 140px;
+  margin: 20px;
+  border-radius: 16px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.scale {
+  position: absolute;
+  bottom: 20px;
+  width: 100%;
+  height: 40px;
+  display: flex;
+}
+
+.scale div {
+  flex: 1;
+  border-left: 1px solid #ddd;
+  font-size: 10px;
+  text-align: center;
+  color: #999;
+}
+
+#needle {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 3px;
+  height: 100%;
+  background: red;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+#freq {
+  text-align: center;
+  font-size: 20px;
+  margin-bottom: 10px;
+}
+
+#program {
+  text-align: center;
+  font-size: 14px;
+  color: #555;
+  min-height: 20px;
+}
+
+.group {
+  margin: 10px;
+  background: #fff;
+  border-radius: 12px;
+}
+
+.group h3 {
+  margin: 0;
+  padding: 14px;
+  border-bottom: 1px solid #eee;
+}
+
+.channel {
+  padding: 12px 14px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.channel:last-child {
+  border-bottom: none;
+}
+
+.channel.active {
+  background: #eef3ff;
+}
 </style>
 </head>
 
-<body class="bg-neutral-900 text-white max-w-md mx-auto">
+<body>
 
-<header class="flex justify-between items-center px-4 py-3 text-lg font-semibold">
-  <span>FM Radio</span>
-  <button id="powerBtn" class="w-9 h-9 rounded-full bg-neutral-700"></button>
-</header>
+<header>FM Radio</header>
 
-<div class="px-4">
-  <div id="dial" class="relative rounded-xl overflow-hidden bg-gradient-to-b from-neutral-800 to-neutral-900">
-    <div id="scale" class="scale"></div>
-    <div id="needle"></div>
-    <input id="freqRange" type="range" min="87.5" max="108" step="0.1"
-      class="absolute inset-0 opacity-0 z-20 touch-pan-x">
-  </div>
-
-  <div id="dialInfo">
-    <div id="freqText"></div>
-    <div id="stationText"></div>
-  </div>
-
-  <div class="flex justify-end mt-3">
-    <div id="stereoLamp" class="stereo"></div>
-  </div>
+<div id="dial">
+  <div class="scale" id="scale"></div>
+  <div id="needle"></div>
 </div>
 
-<div id="tabs" class="flex justify-around px-6 mt-6"></div>
-<div id="channelList" class="px-4 py-4"></div>
+<div id="freq">97.3 MHz</div>
+<div id="program"></div>
+
+<div id="stations"></div>
+
+<audio id="audio"></audio>
+<audio id="noise" src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAIlYAAESsAAACABAAZGF0YQgAAAAA"></audio>
 
 <script>
-/* ================= 기본 설정 ================= */
-const MIN=87.5, MAX=108;
-const dial=document.getElementById('dial');
-const audio=new Audio();
-const ctx=new (window.AudioContext||window.webkitAudioContext)();
-const noiseGain=ctx.createGain(); noiseGain.gain.value=0;
+const FM_MIN = 87.5;
+const FM_MAX = 108.0;
+let freq = 97.3;
+let dragging = false;
 
-/* ================= 노이즈 ================= */
-const buffer=ctx.createBuffer(1,ctx.sampleRate*2,ctx.sampleRate);
-const data=buffer.getChannelData(0);
-for(let i=0;i<data.length;i++) data[i]=(Math.random()*2-1)*0.5;
-const noise=ctx.createBufferSource();
-noise.buffer=buffer; noise.loop=true;
-noise.connect(noiseGain).connect(ctx.destination);
-noise.start();
-
-/* ================= 채널 ================= */
-const channels=[
-{group:'SBS',list:[
-{name:'SBS 파워FM',freq:107.7,url:'https://radio.bsod.kr/stream/?stn=sbs&ch=powerfm'},
-{name:'SBS 러브FM',freq:103.5,url:'https://radio.bsod.kr/stream/?stn=sbs&ch=lovefm'},
-{name:'SBS 고릴라디오M',freq:95.1,url:'https://radio.bsod.kr/stream/?stn=sbs&ch=dmb'}
-]},
-{group:'MBC',list:[
-{name:'MBC FM4U',freq:91.9,url:'https://radio.bsod.kr/stream/?stn=mbc&ch=fm4u'},
-{name:'MBC 표준FM',freq:95.9,url:'https://radio.bsod.kr/stream/?stn=mbc&ch=sfm'},
-{name:'MBC 올댓뮤직',freq:100.7,url:'https://radio.bsod.kr/stream/?stn=mbc&ch=chm'}
-]},
-{group:'KBS',list:[
-{name:'KBS 1라디오',freq:97.3,url:'https://radio.bsod.kr/stream/?stn=kbs&ch=1radio'},
-{name:'KBS 2라디오',freq:106.1,url:'https://radio.bsod.kr/stream/?stn=kbs&ch=2radio'},
-{name:'KBS 3라디오',freq:104.9,url:'https://radio.bsod.kr/stream/?stn=kbs&ch=3radio'},
-{name:'KBS 1FM',freq:93.1,url:'https://radio.bsod.kr/stream/?stn=kbs&ch=1fm'},
-{name:'KBS 2FM',freq:89.1,url:'https://radio.bsod.kr/stream/?stn=kbs&ch=2fm'}
-]},
-{group:'ETC',list:[
-{name:'EBS FM',freq:104.5,url:'https://radio.bsod.kr/stream/?stn=ebs'},
-{name:'CBS 표준FM',freq:98.1,url:'https://radio.bsod.kr/stream/?stn=cbs&ch=sfm'},
-{name:'CBS 음악FM',freq:93.9,url:'https://radio.bsod.kr/stream/?stn=cbs&ch=mfm'}
-]}
+const stations = [
+  { group: "KBS", list: [
+    { name: "KBS 1Radio", freq: 97.3, stream: "https://1radio.gscdn.kbs.co.kr/1radio_192_4.m3u8", json: "json/kbs-1radio.json" },
+    { name: "KBS 3Radio", freq: 104.9, stream: "https://3radio.gscdn.kbs.co.kr/3radio_192_4.m3u8", json: "json/kbs-3radio.json" },
+    { name: "KBS Classic FM", freq: 93.1, stream: "https://classicfm.gscdn.kbs.co.kr/classicfm_192_4.m3u8", json: "json/kbs-classicfm.json" },
+    { name: "KBS Cool FM", freq: 89.1, stream: "https://coolfm.gscdn.kbs.co.kr/coolfm_192_4.m3u8", json: "json/kbs-coolfm.json" },
+    { name: "KBS Happy FM", freq: 106.1, stream: "https://happyfm.gscdn.kbs.co.kr/happyfm_192_4.m3u8", json: "json/kbs-happyfm.json" }
+  ]},
+  { group: "MBC", list: [
+    { name: "MBC Standard FM", freq: 95.9, stream: "https://sminiplay.imbc.com/aac/StandardFM", json: "json/mbc-standardfm.json" },
+    { name: "MBC FM4U", freq: 91.9, stream: "https://sminiplay.imbc.com/aac/FM4U", json: "json/mbc-fm4u.json" },
+    { name: "MBC All That Music", freq: 99.9, stream: "https://sminiplay.imbc.com/aac/AllThatMusic", json: "json/mbc-allthatmusic.json" }
+  ]},
+  { group: "SBS", list: [
+    { name: "SBS PowerFM", freq: 107.7, stream: "https://radio.bsod.kr/stream/?stn=sbs&ch=power", json: "json/sbs-powerfm.json" },
+    { name: "SBS LoveFM", freq: 103.5, stream: "https://radio.bsod.kr/stream/?stn=sbs&ch=love", json: "json/sbs-lovefm.json" },
+    { name: "SBS Gorilla", freq: 101.3, stream: "https://radio.bsod.kr/stream/?stn=sbs&ch=gorilla", json: "json/sbs-gorillam.json" }
+  ]}
 ];
 
-/* ================= JSON 매핑 ================= */
-const scheduleMap={
-"SBS 파워FM":"schedules/sbs-powerfm.json",
-"SBS 러브FM":"schedules/sbs-lovefm.json",
-"SBS 고릴라디오M":"schedules/sbs-gorillam.json",
-"MBC FM4U":"schedules/mbc-fm4u.json",
-"MBC 표준FM":"schedules/mbc-standardfm.json",
-"MBC 올댓뮤직":"schedules/mbc-allthatmusic.json",
-"KBS 1라디오":"schedules/kbs-1radio.json",
-"KBS 2라디오":"schedules/kbs-happyfm.json",
-"KBS 3라디오":"schedules/kbs-3radio.json",
-"KBS 1FM":"schedules/kbs-classicfm.json",
-"KBS 2FM":"schedules/kbs-coolfm.json"
-};
+const audio = document.getElementById("audio");
+const noise = document.getElementById("noise");
 
-/* ================= UI ================= */
-const range=document.getElementById('freqRange');
-const needle=document.getElementById('needle');
-const freqText=document.getElementById('freqText');
-const stationText=document.getElementById('stationText');
-const stereo=document.getElementById('stereoLamp');
-const powerBtn=document.getElementById('powerBtn');
-const tabs=document.getElementById('tabs');
-const channelList=document.getElementById('channelList');
-
-function updateNeedle(f){
-  needle.style.left=((f-MIN)/(MAX-MIN)*dial.clientWidth)+'px';
-  freqText.textContent=f.toFixed(1)+' MHz';
-}
-
-/* ================= 방송 제목 계산 ================= */
-async function getCurrentProgram(name){
-  const path=scheduleMap[name];
-  if(!path) return name;
-  try{
-    const res=await fetch(path);
-    const json=await res.json();
-    const list=json.schedule.weekday;
-    const now=new Date();
-    const nowMin=now.getHours()*60+now.getMinutes();
-    let cur=list[list.length-1];
-    for(const p of list){
-      const [h,m]=p.start.split(":").map(Number);
-      if(nowMin < h*60+m) break;
-      cur=p;
-    }
-    return cur.title;
-  }catch{
-    return name;
+function renderScale() {
+  const scale = document.getElementById("scale");
+  for (let i = FM_MIN; i <= FM_MAX; i += 2) {
+    const d = document.createElement("div");
+    d.textContent = i;
+    scale.appendChild(d);
   }
 }
 
-/* ================= 스냅 ================= */
-async function snapTo(freq){
-  const flat=channels.flatMap(g=>g.list);
-  const ch=flat.reduce((a,b)=>Math.abs(b.freq-freq)<Math.abs(a.freq-freq)?b:a);
-  range.value=ch.freq;
-  updateNeedle(ch.freq);
-  if(!power) return;
-  noiseGain.gain.value=0;
-  stereo.classList.add('on');
-  audio.src=ch.url;
-  audio.volume=0;
-  audio.play();
-  let v=0;
-  const fade=setInterval(()=>{v+=.05;audio.volume=Math.min(v,1);if(v>=1)clearInterval(fade)},40);
-  stationText.textContent=await getCurrentProgram(ch.name);
-}
-
-/* ================= 탭 ================= */
-let opened=null;
-channels.forEach(g=>{
-  const tab=document.createElement('div');
-  tab.className='tab';
-  tab.textContent=g.group;
-  tab.onclick=()=>{
-    if(opened===g){
-      channelList.style.height='0px';
-      channelList.classList.remove('open');
-      document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-      opened=null;
-      return;
-    }
-    opened=g;
-    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-    tab.classList.add('active');
-    channelList.innerHTML='';
-    g.list.forEach(ch=>{
-      const d=document.createElement('div');
-      d.className='channel-item flex justify-between bg-neutral-800 rounded-lg p-3 mb-2';
-      d.innerHTML=`<span>${ch.name}</span><span class="text-xs text-gray-400">${ch.freq}</span>`;
-      d.onclick=()=>snapTo(ch.freq);
-      channelList.appendChild(d);
-    });
-    channelList.classList.add('open');
-    channelList.style.height=channelList.scrollHeight+'px';
-  };
-  tabs.appendChild(tab);
-});
-
-/* ================= 이벤트 ================= */
-range.addEventListener('input',()=>{
-  ctx.resume();
-  updateNeedle(+range.value);
-  if(!power){stationText.textContent='';return;}
-  stationText.textContent='스캔중...';
-});
-range.addEventListener('change',()=>snapTo(+range.value));
-
-let power=false;
-powerBtn.onclick=()=>{
-  power=!power;
-  powerBtn.classList.toggle('power-on',power);
-  if(!power){
+function setFreq(f) {
+  freq = Math.max(FM_MIN, Math.min(FM_MAX, f));
+  document.getElementById("freq").textContent = freq.toFixed(1) + " MHz";
+  const hit = findStation();
+  if (hit) {
+    noise.pause();
+    audio.src = hit.stream;
+    audio.play();
+    loadProgram(hit.json);
+  } else {
     audio.pause();
-    stereo.classList.remove('on');
-    stationText.textContent='전원 꺼짐';
-  }else{
-    stationText.textContent='예열중...';
-    setTimeout(()=>snapTo(+range.value),600);
+    noise.play();
+    document.getElementById("program").textContent = "";
   }
-};
+}
 
-range.value=91.9;
-updateNeedle(91.9);
-stationText.textContent='전원 꺼짐';
+function findStation() {
+  for (const g of stations) {
+    for (const s of g.list) {
+      if (Math.abs(s.freq - freq) < 0.15) return s;
+    }
+  }
+  return null;
+}
+
+function loadProgram(json) {
+  fetch(json)
+    .then(r => r.json())
+    .then(data => {
+      const now = new Date();
+      const hhmm = now.toTimeString().slice(0,5);
+      const p = data.schedule.weekday.reverse().find(p => p.start <= hhmm);
+      document.getElementById("program").textContent = p ? p.title : "";
+    });
+}
+
+function renderStations() {
+  const root = document.getElementById("stations");
+  stations.forEach(g => {
+    const box = document.createElement("div");
+    box.className = "group";
+    const h = document.createElement("h3");
+    h.textContent = g.group;
+    box.appendChild(h);
+
+    g.list.forEach(s => {
+      const c = document.createElement("div");
+      c.className = "channel";
+      c.textContent = `${s.name} · ${s.freq}`;
+      c.onclick = () => setFreq(s.freq);
+      box.appendChild(c);
+    });
+    root.appendChild(box);
+  });
+}
+
+let lastX = null;
+document.getElementById("dial").addEventListener("touchstart", e => {
+  dragging = true;
+  lastX = e.touches[0].clientX;
+});
+document.getElementById("dial").addEventListener("touchmove", e => {
+  if (!dragging) return;
+  const dx = e.touches[0].clientX - lastX;
+  setFreq(freq + dx * 0.01);
+  lastX = e.touches[0].clientX;
+});
+document.addEventListener("touchend", () => dragging = false);
+
+renderScale();
+renderStations();
+setFreq(freq);
 </script>
+
 </body>
 </html>
