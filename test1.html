@@ -193,32 +193,52 @@ function snapTo(freq){
   else { currentSchedule=null; nowProgram.textContent=''; }
 }
 
+function closeList(){
+  channelList.style.height = channelList.scrollHeight + 'px';
+  requestAnimationFrame(()=>{
+    channelList.style.height = '0px';
+    channelList.classList.remove('open');
+  });
+}
+
 channels.forEach(g=>{
   const tab=document.createElement('div');
   tab.className='tab';
   tab.textContent=g.group;
+
   tab.onclick=()=>{
     if(activeGroup===g){
-      channelList.classList.remove('open');
+      closeList();
       activeGroup=null;
       document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
       return;
     }
+
     activeGroup=g;
     document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
     tab.classList.add('active');
+
     channelList.innerHTML='';
     g.list.forEach(ch=>{
       const d=document.createElement('div');
       d.className="channel-item flex justify-between bg-neutral-800 rounded-lg p-3 mb-2 cursor-pointer";
       d.innerHTML=`<span>${ch.name}</span><span class="text-xs text-gray-400">${ch.freq.toFixed(1)}</span>`;
-      d.onclick=()=>{snapTo(ch.freq);};
+      d.onclick=()=>{
+        snapTo(ch.freq);
+        closeList();
+        document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+        activeGroup=null;
+      };
       channelList.appendChild(d);
     });
+
     channelList.classList.add('open');
+    channelList.style.height = channelList.scrollHeight + 'px';
   };
+
   tabs.appendChild(tab);
 });
+
 
 range.addEventListener('change',()=>snapTo(+range.value));
 
