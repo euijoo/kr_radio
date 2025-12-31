@@ -158,11 +158,21 @@ function updateNowProgram(){
     const next=list[i+1]?toMin(list[i+1].time||list[i+1].start):9999;
     if(nowMin>=cur&&nowMin<next){
       nowProgram.textContent=list[i].title;
+      
+      // 재생 중이면 Media Session도 갱신
+      if(power && !audio.paused){
+        const flat=channels.flatMap(g=>g.list);
+        const currentChannel=flat.find(ch=>ch.url===audio.src);
+        if(currentChannel){
+          updateMediaSession(currentChannel, list[i].title);
+        }
+      }
       return;
     }
   }
   nowProgram.textContent='';
 }
+
 setInterval(updateNowProgram,60000);
 
 /* ===== 노이즈 ===== */
