@@ -222,28 +222,33 @@ async function snapTo(freq){
   noiseGain.gain.value=0.05;
   stereo.classList.add('on');
   
-  // 로딩 메시지 먼저 표시
-  stationText.textContent = nearest.name + ' 연결 중...';
+  // 짧은 지연 후 로딩 메시지 표시 (input 이벤트와 충돌 방지)
+  setTimeout(() => {
+    if(audio.src === nearest.url) {  // 여전히 같은 채널이면
+      stationText.textContent = nearest.name + ' 연결 중...';
+    }
+  }, 50);
 
   audio.src=nearest.url;
   audio.volume=1;
 
   try{
     await audio.play();
-    stationText.textContent=nearest.name;  // 성공하면 채널명만
+    stationText.textContent=nearest.name;
     
     const currentTitle = nowProgram.textContent || nearest.name;
     updateMediaSession(nearest, currentTitle);
   }catch(e){
     stereo.classList.remove('on');
     noiseGain.gain.value=0.05;
-    stationText.textContent='연결 실패';  // 진짜 실패했을 때만
+    stationText.textContent='연결 실패';
     return;
   }
 
   if(nearest.json) loadSchedule(nearest.json);
   else{currentSchedule=null;nowProgram.textContent='';}
 }
+
 
 
 /* === 방송이 실제로 시작되면 노이즈 완전히 끄기 === */
