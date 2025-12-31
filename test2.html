@@ -57,7 +57,10 @@
 <body class="bg-neutral-900 text-white max-w-md mx-auto">
 
 <header class="flex justify-between items-center px-4 py-3 text-lg font-semibold">
-  <span>FM Radio</span>
+  <div>
+    <div>FM Radio</div>
+    <div id="currentTime" class="text-xs font-normal text-gray-400 mt-0.5"></div>
+  </div>
   <button id="powerBtn" class="w-9 h-9 rounded-full bg-neutral-700"></button>
 </header>
 
@@ -379,6 +382,17 @@ channels.forEach(g=>{
 range.value=91.9;
 updateNeedle(91.9);
 stationText.textContent='전원 꺼짐';
+
+ // 현재 시간 표시 (초 포함)
+function updateTime(){
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2, '0');
+  const m = String(now.getMinutes()).padStart(2, '0');
+  const s = String(now.getSeconds()).padStart(2, '0');
+  document.getElementById('currentTime').textContent = h + ':' + m + ':' + s;
+}
+updateTime();
+setInterval(updateTime, 1000);
 </script>
 
 </body>
