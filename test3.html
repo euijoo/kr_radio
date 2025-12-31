@@ -259,8 +259,13 @@ const tabs=document.getElementById('tabs');
 const channelList=document.getElementById('channelList');
 
 function updateNeedle(f){
-  needle.style.left=((f-MIN)/(MAX-MIN)*dial.clientWidth)+'px';
-  freqText.textContent=f.toFixed(1)+' MHz';
+  const dialWidth = dial.clientWidth;
+  const padding = 30; // CSS의 .scale padding과 동일
+  const usableWidth = dialWidth - (padding * 2);
+  const position = padding + ((f - MIN) / (MAX - MIN) * usableWidth);
+  
+  needle.style.left = position + 'px';
+  freqText.textContent = f.toFixed(1) + ' MHz';
 }
 
 /* ==== Media Session 메타데이터 업데이트 ==== */
