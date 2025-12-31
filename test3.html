@@ -259,14 +259,40 @@ const tabs=document.getElementById('tabs');
 const channelList=document.getElementById('channelList');
 
 function updateNeedle(f){
-  const dialWidth = dial.clientWidth;
-  const padding = 30; // CSS의 .scale padding과 동일
-  const usableWidth = dialWidth - (padding * 2);
-  const position = padding + ((f - MIN) / (MAX - MIN) * usableWidth);
+  // 실제 생성된 눈금 위치를 기준으로 계산
+  const majorFreqs = [88, 92, 96, 100, 104, 108];
+  const ticks = document.querySelectorAll('.tick.major');
+  
+  if (ticks.length === 0) {
+    // 눈금이 아직 생성 안 됐으면 기본 계산
+    needle.style.left = ((f - MIN) / (MAX - MIN) * dial.clientWidth) + 'px';
+    freqText.textContent = f.toFixed(1) + ' MHz';
+    return;
+  }
+  
+  // 현재 주파수가 어느 구간에 있는지 찾기
+  let position;
+  if (f <= majorFreqs[0]) {
+    position = ticks[0].offsetLeft + (ticks[0].offsetWidth / 2);
+  } else if (f >= majorFreqs[majorFreqs.length - 1]) {
+    position = ticks[ticks.length - 1].offsetLeft + (ticks[ticks.length - 1].offsetWidth / 2);
+  } else {
+    // 두 눈금 사이 보간
+    for (let i = 0; i < majorFreqs.length - 1; i++) {
+      if (f >= majorFreqs[i] && f <= majorFreqs[i + 1]) {
+        const tick1 = ticks[i].offsetLeft + (ticks[i].offsetWidth / 2);
+        const tick2 = ticks[i + 1].offsetLeft + (ticks[i + 1].offsetWidth / 2);
+        const ratio = (f - majorFreqs[i]) / (majorFreqs[i + 1] - majorFreqs[i]);
+        position = tick1 + (tick2 - tick1) * ratio;
+        break;
+      }
+    }
+  }
   
   needle.style.left = position + 'px';
   freqText.textContent = f.toFixed(1) + ' MHz';
 }
+
 
 /* ==== Media Session 메타데이터 업데이트 ==== */
 function updateMediaSession(channel, programTitle){
