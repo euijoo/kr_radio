@@ -334,10 +334,13 @@ async function snapTo(freq){
   }
   
   // 전원이 꺼져있으면 재생하지 않음
-  if(!power) return;
+  if(!power) {
+    stereo.classList.remove('on');  // 추가: 전원 꺼져있으면 램프도 끄기
+    return;
+  }
 
   noiseGain.gain.value=0.05;
-  stereo.classList.add('on');
+  stereo.classList.add('on');  // 이미 여기 있지만, 위치 확인
   
   setTimeout(() => {
     if(audio.src === nearest.url) {
@@ -361,6 +364,7 @@ async function snapTo(freq){
     return;
   }
 }
+
 
 
 
