@@ -15,9 +15,17 @@
 #dial{--dial-height:220px;height:var(--dial-height);position:relative}
 .scale{position:absolute;bottom:0;left:0;right:0;height:120px;display:flex;justify-content:space-between;align-items:flex-end;padding:0 20px}
 .tick{display:flex;flex-direction:column;align-items:center;position:relative}
-.tick-mark{width:2px;height:20px;background:#fff;margin-bottom:8px}
-.tick.major .tick-mark{height:30px;width:3px}
-.tick-label{font-size:18px;font-weight:600;color:#fff}
+
+/* 큰 눈금 (88, 92, 96, 100, 104, 108) */
+.tick.major .tick-mark{width:3px;height:30px;background:#fff;margin-bottom:8px}
+.tick.major .tick-label{font-size:18px;font-weight:600;color:#fff}
+
+/* 중간 눈금 (90, 94, 98, 102, 106) */
+.tick.medium .tick-mark{width:2px;height:20px;background:#ddd;margin-bottom:8px}
+
+/* 작은 눈금 (0.5MHz 단위) */
+.tick.minor .tick-mark{width:1px;height:12px;background:#999;margin-bottom:8px}
+
 .am-scale{position:absolute;top:20px;left:0;right:0;height:60px;display:flex;justify-content:space-between;align-items:flex-start;padding:0 20px;opacity:0.4}
 .am-tick{display:flex;flex-direction:column;align-items:center}
 .am-tick-mark{width:1px;height:12px;background:#fff;margin-bottom:6px}
@@ -176,17 +184,34 @@ const channels=[
 ];
 
 /* ===== UI ===== */
-/* ===== FM 눈금 (88, 92, 96, 100, 104, 108만 표시) ===== */
+/* ===== FM 눈금 (주요 + 중간) ===== */
 const scale=document.getElementById('scale');
-[88, 92, 96, 100, 104, 108].forEach(freq => {
+
+// 88부터 108까지 0.5MHz 간격으로 눈금 생성
+for(let freq = 88; freq <= 108; freq += 0.5) {
   const tick = document.createElement('div');
-  tick.className = 'tick major';
-  tick.innerHTML = `
-    <div class="tick-mark"></div>
-    <div class="tick-label">${freq}</div>
-  `;
+  
+  // 4MHz 간격 (88, 92, 96, 100, 104, 108): 큰 눈금 + 숫자
+  if (freq % 4 === 0) {
+    tick.className = 'tick major';
+    tick.innerHTML = `
+      <div class="tick-mark"></div>
+      <div class="tick-label">${Math.round(freq)}</div>
+    `;
+  }
+  // 2MHz 간격 (90, 94, 98, 102, 106): 중간 눈금
+  else if (freq % 2 === 0) {
+    tick.className = 'tick medium';
+    tick.innerHTML = `<div class="tick-mark"></div>`;
+  }
+  // 나머지 0.5MHz 간격: 작은 눈금
+  else {
+    tick.className = 'tick minor';
+    tick.innerHTML = `<div class="tick-mark"></div>`;
+  }
+  
   scale.appendChild(tick);
-});
+}
 
 /* ===== AM 눈금 (위쪽, 장식용) ===== */
 const amScale = document.createElement('div');
@@ -201,6 +226,7 @@ amScale.className = 'am-scale';
   amScale.appendChild(tick);
 });
 document.getElementById('dial').insertBefore(amScale, scale);
+
 
 
 let power=false,activeGroup=null;
