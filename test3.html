@@ -376,9 +376,13 @@ audio.addEventListener('playing', () => {
 });
 
 /* 스캔/슬라이더 조작 시 */
+let inputTimer = null;
+
 range.addEventListener('input',()=>{
   ctx.resume();
   updateNeedle(+range.value);
+  
+  clearTimeout(inputTimer);
   
   if(!power){
     noiseGain.gain.value=0;
@@ -389,7 +393,12 @@ range.addEventListener('input',()=>{
   noiseGain.gain.value=0.05;
   stereo.classList.remove('on');
   stationText.textContent='스캔중...';
+  
+  inputTimer = setTimeout(() => {
+    // snapTo가 실행되면 램프가 켜짐
+  }, 200);
 });
+
 
 range.addEventListener('change',()=>snapTo(+range.value));
 
