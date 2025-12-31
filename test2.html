@@ -65,14 +65,13 @@
   </div>
 
   <div id="dialInfo">
-  <div class="flex items-center justify-between">
-  <div id="freqText"></div>
-  <div id="stereoLamp" class="stereo"></div>
-</div>
+    <div class="flex items-center justify-between">
+      <div id="freqText"></div>
+      <div id="stereoLamp" class="stereo"></div>
+    </div>
     <div id="stationText"></div>
     <div id="nowProgram"></div>
   </div>
-
 </div>
 
 <div id="tabs" class="flex justify-around px-6 mt-6"></div>
@@ -192,6 +191,24 @@ function updateNeedle(f){
   freqText.textContent=f.toFixed(1)+' MHz';
 }
 
+/* ==== Media Session 메타데이터 업데이트 ==== */
+function updateMediaSession(channel, programTitle){
+  if(!('mediaSession' in navigator)) return;
+
+  const title = programTitle || channel.name;
+  const artist = channel.group || 'FM Radio';
+
+  navigator.mediaSession.metadata = new MediaMetadata({
+    title: title,
+    artist: artist,
+    album: 'FM Radio',
+    artwork: [
+      { src: 'bg-radio.png', sizes: '512x512', type: 'image/png' }
+    ]
+  });
+}
+
+/* ===== 채널 튜닝 ===== */
 async function snapTo(freq){
   const flat=channels.flatMap(g=>g.list);
   const nearest=flat.reduce((a,b)=>
@@ -211,6 +228,10 @@ async function snapTo(freq){
   try{
     await audio.play();
     stationText.textContent=nearest.name;
+
+    // 현재 프로그램 제목 또는 채널명으로 잠금화면 메타데이터 설정
+    const currentTitle = nowProgram.textContent || nearest.name;
+    updateMediaSession(nearest, currentTitle);
   }catch(e){
     stereo.classList.remove('on');
     noiseGain.gain.value=0.05;
@@ -247,6 +268,9 @@ powerBtn.onclick=()=>{
     stereo.classList.remove('on');
     stationText.textContent='전원 꺼짐';
     nowProgram.textContent='';
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.metadata = null;
+    }
   }else{
     stationText.textContent='예열중...';
     noiseGain.gain.value=0.05;
@@ -254,7 +278,7 @@ powerBtn.onclick=()=>{
   }
 };
 
-/* === 오디오 에러 처리 추가 === */
+/* === 오디오 에러 처리 === */
 audio.addEventListener('error', () => {
   stereo.classList.remove('on');
   noiseGain.gain.value = 0.05;
