@@ -387,12 +387,12 @@ audio.addEventListener('playing', () => {
 
 /* 스캔/슬라이더 조작 시 */
 let inputTimer = null;
+let isChanging = false;
 
 range.addEventListener('input',()=>{
   ctx.resume();
   updateNeedle(+range.value);
   
-  // input 이벤트가 끝나고 잠깐 후에 실행될 타이머 초기화
   clearTimeout(inputTimer);
   
   if(!power){
@@ -403,19 +403,21 @@ range.addEventListener('input',()=>{
   
   noiseGain.gain.value=0.05;
   
-  // input 이벤트 중에만 램프를 끄고, 200ms 후에도 input이 없으면 다시 켜기
-  stereo.classList.remove('on');
-  stationText.textContent='스캔중...';
-  
-  inputTimer = setTimeout(() => {
-    // change 이벤트로 snapTo가 실행됐다면 이미 램프가 켜져 있을 것
-    // 추가 처리 없음
-  }, 200);
+  // change 이벤트가 실행 중이 아닐 때만 램프 끄기
+  if(!isChanging){
+    stereo.classList.remove('on');
+    stationText.textContent='스캔중...';
+  }
 });
 
-
-
-range.addEventListener('change',()=>snapTo(+range.value));
+range.addEventListener('change',()=>{
+  isChanging = true;
+  snapTo(+range.value).then(() => {
+    setTimeout(() => {
+      isChanging = false;
+    }, 100);
+  });
+});
 
 powerBtn.onclick=()=>{
   ctx.resume();
@@ -436,6 +438,7 @@ powerBtn.onclick=()=>{
     setTimeout(()=>snapTo(+range.value),800);
   }
 };
+
 
 /* === 오디오 에러 처리 === */
   
