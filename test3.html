@@ -382,6 +382,7 @@ range.addEventListener('input',()=>{
   ctx.resume();
   updateNeedle(+range.value);
   
+  // input 이벤트가 끝나고 잠깐 후에 실행될 타이머 초기화
   clearTimeout(inputTimer);
   
   if(!power){
@@ -391,13 +392,17 @@ range.addEventListener('input',()=>{
   }
   
   noiseGain.gain.value=0.05;
+  
+  // input 이벤트 중에만 램프를 끄고, 200ms 후에도 input이 없으면 다시 켜기
   stereo.classList.remove('on');
   stationText.textContent='스캔중...';
   
   inputTimer = setTimeout(() => {
-    // snapTo가 실행되면 램프가 켜짐
+    // change 이벤트로 snapTo가 실행됐다면 이미 램프가 켜져 있을 것
+    // 추가 처리 없음
   }, 200);
 });
+
 
 
 range.addEventListener('change',()=>snapTo(+range.value));
