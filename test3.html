@@ -279,14 +279,26 @@ async function snapTo(freq){
 
   range.value=nearest.freq;
   updateNeedle(nearest.freq);
+  
+  // 전원 꺼져 있어도 채널 정보 표시
+  stationText.textContent=nearest.name;
+  
+  // 스케줄 로드 (전원 상관없이)
+  if(nearest.json) {
+    await loadSchedule(nearest.json);
+  } else {
+    currentSchedule=null;
+    nowProgram.textContent='';
+  }
+  
+  // 전원이 꺼져있으면 재생하지 않음
   if(!power) return;
 
   noiseGain.gain.value=0.05;
   stereo.classList.add('on');
   
-  // 짧은 지연 후 로딩 메시지 표시 (input 이벤트와 충돌 방지)
   setTimeout(() => {
-    if(audio.src === nearest.url) {  // 여전히 같은 채널이면
+    if(audio.src === nearest.url) {
       stationText.textContent = nearest.name + ' 연결 중...';
     }
   }, 50);
@@ -306,10 +318,8 @@ async function snapTo(freq){
     stationText.textContent='연결 실패';
     return;
   }
-
-  if(nearest.json) loadSchedule(nearest.json);
-  else{currentSchedule=null;nowProgram.textContent='';}
 }
+
 
 
 
@@ -323,17 +333,18 @@ audio.addEventListener('playing', () => {
 range.addEventListener('input',()=>{
   ctx.resume();
   updateNeedle(+range.value);
+  
   if(!power){
     noiseGain.gain.value=0;
     stereo.classList.remove('on');
-    stationText.textContent='';
     return;
   }
-  // 스캔 중에는 항상 약간의 노이즈
+  
   noiseGain.gain.value=0.05;
   stereo.classList.remove('on');
   stationText.textContent='스캔중...';
 });
+
 range.addEventListener('change',()=>snapTo(+range.value));
 
 powerBtn.onclick=()=>{
