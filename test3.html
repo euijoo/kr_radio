@@ -27,14 +27,14 @@
 .tick{display:flex;flex-direction:column;align-items:center;position:relative}
 
 /* 큰 눈금 (88, 92, 96, 100, 104, 108) */
-.tick.major .tick-mark{width:2px;height:22px;background:#00d9ff;margin-bottom:6px;box-shadow:0 0 4px #00d9ff}
-.tick.major .tick-label{font-size:14px;font-weight:500;color:#00d9ff;text-shadow:0 0 6px rgba(0,217,255,0.6)}
+.tick.major .tick-mark{width:2px;height:28px;background:#00d9ff;margin-bottom:6px;box-shadow:0 0 4px #00d9ff}
 
 /* 중간 눈금 (90, 94, 98, 102, 106) */
-.tick.medium .tick-mark{width:1.5px;height:16px;background:#00b8dd;margin-bottom:6px}
+.tick.medium .tick-mark{width:1.5px;height:20px;background:#00b8dd;margin-bottom:6px}
 
 /* 작은 눈금 (0.5MHz 단위) */
-.tick.minor .tick-mark{width:1px;height:10px;background:#008ba8;margin-bottom:6px;opacity:0.7}
+.tick.minor .tick-mark{width:1px;height:13px;background:#008ba8;margin-bottom:6px;opacity:0.7}
+
 
 /* AM 눈금 (위쪽) */
 .am-scale{position:absolute;top:15px;left:0;right:0;height:50px;display:flex;justify-content:space-between;align-items:flex-start;padding:0 30px;opacity:0.5}
@@ -46,9 +46,9 @@
 /* 바늘 색상 변경 */
 #needle{
   position:absolute;
-  top:-12px;  
+  top:-12px;  /* 원래대로 */
   width:3px;
-  height:calc(var(--dial-height) + 24px); 
+  height:calc(var(--dial-height) + 24px);  /* 원래대로 */
   background:linear-gradient(to bottom, #ff3333, #cc0000);
   box-shadow:0 0 12px rgba(255,51,51,0.9);
   z-index:10;
