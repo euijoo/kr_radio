@@ -219,7 +219,8 @@ async function snapTo(freq){
   updateNeedle(nearest.freq);
   if(!power) return;
 
-  noiseGain.gain.value=0;
+  // 튜닝 시작: 일단 노이즈는 줄이되 완전히 끄지는 않음
+  noiseGain.gain.value=0.05;
   stereo.classList.add('on');
 
   audio.src=nearest.url;
@@ -229,7 +230,6 @@ async function snapTo(freq){
     await audio.play();
     stationText.textContent=nearest.name;
 
-    // 현재 프로그램 제목 또는 채널명으로 잠금화면 메타데이터 설정
     const currentTitle = nowProgram.textContent || nearest.name;
     updateMediaSession(nearest, currentTitle);
   }catch(e){
@@ -243,6 +243,13 @@ async function snapTo(freq){
   else{currentSchedule=null;nowProgram.textContent='';}
 }
 
+/* === 방송이 실제로 시작되면 노이즈 완전히 끄기 === */
+audio.addEventListener('playing', () => {
+  // 스트림이 실제로 재생되기 시작한 시점
+  noiseGain.gain.value = 0;
+});
+
+/* 스캔/슬라이더 조작 시 */
 range.addEventListener('input',()=>{
   ctx.resume();
   updateNeedle(+range.value);
@@ -252,6 +259,7 @@ range.addEventListener('input',()=>{
     stationText.textContent='';
     return;
   }
+  // 스캔 중에는 항상 약간의 노이즈
   noiseGain.gain.value=0.05;
   stereo.classList.remove('on');
   stationText.textContent='스캔중...';
