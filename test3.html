@@ -403,12 +403,17 @@ range.addEventListener('input',()=>{
   
   noiseGain.gain.value=0.05;
   
-  // change 이벤트가 실행 중이 아닐 때만 램프 끄기
-  if(!isChanging){
-    stereo.classList.remove('on');
+  // iOS 터치 중이거나 change 실행 중이면 램프를 건드리지 않음
+  if(!isChanging && !isTouching){
     stationText.textContent='스캔중...';
   }
+  
+  // change가 아닌 경우에만 램프 끄기
+  if(!isChanging){
+    stereo.classList.remove('on');
+  }
 });
+
 
 range.addEventListener('change',()=>{
   isChanging = true;
@@ -451,9 +456,11 @@ audio.addEventListener('error', () => {
 
 /* ===== iOS 터치 감도 보정 ===== */
 let lastTouchX=null;
+let isTouching=false;
 const isIOS=/iPhone|iPad|iPod/i.test(navigator.userAgent);
 if(isIOS){
   range.addEventListener('touchstart',e=>{
+    isTouching=true;
     lastTouchX=e.touches[0].clientX;
   });
   range.addEventListener('touchmove',e=>{
@@ -470,7 +477,10 @@ if(isIOS){
     range.dispatchEvent(new Event('input'));
   },{passive:false});
   range.addEventListener('touchend',()=>{
+    isTouching=false;
     lastTouchX=null;
+    // touchend 직후 change 이벤트 발생 전에 isChanging 플래그 설정
+    isChanging=true;
     range.dispatchEvent(new Event('change'));
   });
 }
