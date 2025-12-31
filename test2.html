@@ -1,832 +1,338 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>FM Radio - All Devices</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FM Radio</title>
+<script src="https://cdn.tailwindcss.com"></script>
 
-  <style>
-  /* ================== TUNER SIZE ================== */
-  #dial {
-    --dial-height: 220px;
-    height: var(--dial-height);
-  }
+<style>
+#dial{--dial-height:220px;height:var(--dial-height)}
+.scale{position:absolute;inset:0;display:flex;align-items:flex-end;padding:0 12px}
+.tick{width:6px;height:100%;position:relative}
+.tick::before{content:"";position:absolute;bottom:0;left:50%;transform:translateX(-50%)}
+.tick.small::before{width:1px;height:35%;background:#e5e5e5;opacity:.6}
+.tick.mid::before{width:1px;height:55%;background:#f0f0f0;opacity:.8}
+.tick.big::before{width:2px;height:85%;background:#fff;opacity:.95}
+.tick.big span{position:absolute;bottom:calc(85% + 6px);left:50%;transform:translateX(-50%);font-size:10px;color:#e0e0e0}
+#needle{
+  position:absolute;
+  top:-12px;
+  width:3px;
+  height:calc(var(--dial-height) + 24px);
+  background:linear-gradient(#ffd700,#ffae00);
+  box-shadow:0 0 12px rgba(255,215,0,.9);
+  z-index:10;
+  transition:left .18s ease-out;
+}
+#dialInfo{padding:10px 12px 0}
+#freqText{font-size:32px;font-weight:600}
+#stationText{font-size:13px;color:#9ca3af;margin-top:4px}
+#nowProgram{font-size:12px;color:#d1d5db;margin-top:2px}
+#stereoLamp{margin-bottom:10px;}
+.stereo{width:8px;height:8px;border-radius:50%;background:#0f0;box-shadow:0 0 10px #0f0;opacity:0;transition:.3s}
+.stereo.on{opacity:1}
+.power-on{background:#154efa!important;box-shadow:0 0 12px #154efa}
+.tab{cursor:pointer;font-weight:600;color:#aaa;padding-bottom:4px}
+.tab.active{color:#fff;border-bottom:2px solid #facc15}
+#channelList{overflow:hidden;height:0;opacity:0;transform:translateY(-6px);transition:height .45s,opacity .3s,transform .45s}
+#channelList.open{opacity:1;transform:translateY(0)}
+.channel-item{opacity:0;transform:translateY(6px);transition:.35s}
+#channelList.open .channel-item{opacity:1;transform:translateY(0)}
 
-  /* ================== SCALE ================== */
-  .scale {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: flex-end;
-    padding: 0 12px;
-  }
-
-  .frequency-tick {
-    width: 6px;
-    height: 100%;
-    position: relative;
-  }
-
-  .frequency-tick::before {
-    content: "";
-    position: absolute;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-  }
-
-  .frequency-tick.small::before {
-    width: 1px;
-    height: 35%;
-    background: #e5e5e5;
-    opacity: 0.6;
-  }
-
-  .frequency-tick.mid::before {
-    width: 1px;
-    height: 55%;
-    background: #f0f0f0;
-    opacity: 0.8;
-  }
-
-  .frequency-tick.big::before {
-    width: 2px;
-    height: 85%;
-    background: #ffffff;
-    opacity: 0.95;
-  }
-
-  .frequency-tick.big span {
-    position: absolute;
-    bottom: calc(85% + 6px);
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 10px;
-    color: #e0e0e0;
-    font-weight: 500;
-  }
-
-  /* ================== NEEDLE ================== */
-  #needle {
-    position: absolute;
-    top: -12px;
-    width: 3px;
-    height: calc(var(--dial-height) + 24px);
-    background: linear-gradient(#ffd700, #ffae00);
-    box-shadow: 0 0 12px rgba(255, 215, 0, 0.9);
-    z-index: 10;
-    transition: left 0.05s ease-out;
-  }
-
-  /* ================== INFO (튜너 아래) ================== */
-  #dialInfo {
-    padding: 10px 12px 0;
-  }
-
-  #freqText {
-    font-size: 32px;
-    font-weight: 700;
-    line-height: 1;
-    color: #facc15;
-  }
-
-  #stationText {
-    font-size: 13px;
-    color: #9ca3af;
-    margin-top: 4px;
-    min-height: 18px;
-  }
-
-  /* ================== UI ================== */
-  .stereo-lamp {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: #0f0;
-    box-shadow: 0 0 10px #0f0;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-  }
-
-  .stereo-lamp.on {
-    opacity: 1;
-  }
-
-  .power-button {
-    transition: all 0.3s ease;
-    background: #404040;
-    border: 2px solid #525252;
-  }
-
-  .power-button.on {
-    background: #facc15;
-    box-shadow: 0 0 12px #facc15;
-    border-color: #fbbf24;
-  }
-
-  .power-button:hover {
-    transform: scale(1.05);
-  }
-
-  .power-button:active {
-    transform: scale(0.95);
-  }
-
-  .tab {
-    cursor: pointer;
-    font-weight: 600;
-    color: #aaa;
-    padding-bottom: 4px;
-    transition: all 0.3s ease;
-    position: relative;
-  }
-
-  .tab:hover {
-    color: #d4d4d8;
-  }
-
-  .tab.active {
-    color: #fff;
-    border-bottom: 2px solid #facc15;
-  }
-
-  /* ================== CHANNEL LIST ================== */
-  #channelList {
-    overflow: hidden;
-    height: 0;
-    opacity: 0;
-    transform: translateY(-6px);
-    transition:
-      height 0.45s cubic-bezier(0.4, 0, 0.2, 1),
-      opacity 0.3s ease,
-      transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  #channelList.open {
-    opacity: 1;
-    transform: translateY(0);
-  }
-
-  .channel-item {
-    opacity: 0;
-    transform: translateY(6px);
-    transition: all 0.35s ease;
-    cursor: pointer;
-  }
-
-  #channelList.open .channel-item {
-    opacity: 1;
-    transform: translateY(0);
-  }
-
-  .channel-item:hover {
-    background-color: #1f2937 !important;
-    transform: translateX(4px);
-  }
-
-  .channel-item.active {
-    background-color: #1f2937 !important;
-    border-left: 3px solid #facc15;
-  }
-
-  /* ================== VOLUME CONTROL ================== */
-  .volume-container {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 16px;
-    padding: 12px;
-    background: #1f2937;
-    border-radius: 8px;
-  }
-
-  .volume-label {
-    font-size: 12px;
-    color: #9ca3af;
-    min-width: 40px;
-  }
-
-  #volumeSlider {
-    flex: 1;
-    height: 4px;
-    border-radius: 2px;
-    background: #404040;
-    outline: none;
-    -webkit-appearance: none;
-    appearance: none;
-  }
-
-  #volumeSlider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    background: #facc15;
-    cursor: pointer;
-    box-shadow: 0 0 8px rgba(250, 204, 21, 0.6);
-  }
-
-  #volumeSlider::-moz-range-thumb {
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    background: #facc15;
-    cursor: pointer;
-    border: none;
-    box-shadow: 0 0 8px rgba(250, 204, 21, 0.6);
-  }
-
-  .volume-value {
-    font-size: 12px;
-    color: #facc15;
-    font-weight: 600;
-    min-width: 28px;
-    text-align: right;
-  }
-
-  /* ================== PRESET BUTTONS ================== */
-  .preset-section {
-    margin-top: 16px;
-  }
-
-  .preset-label {
-    font-size: 12px;
-    color: #9ca3af;
-    margin-bottom: 8px;
-    display: block;
-  }
-
-  .preset-buttons {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-  }
-
-  .preset-btn {
-    padding: 10px 8px;
-    background: #1f2937;
-    border: 1px solid #404040;
-    border-radius: 6px;
-    color: #9ca3af;
-    font-size: 11px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-  }
-
-  .preset-btn:hover {
-    background: #27364a;
-    border-color: #facc15;
-    color: #facc15;
-  }
-
-  .preset-btn.filled {
-    background: #27364a;
-    border-color: #facc15;
-    color: #facc15;
-  }
-
-  /* ================== CLOCK ================== */
-  .clock-display {
-    font-size: 11px;
-    color: #6b7280;
-    font-family: 'Courier New', monospace;
-  }
-
-  /* ================== ERROR MESSAGE ================== */
-  .error-message {
-    padding: 8px 12px;
-    background: rgba(239, 68, 68, 0.1);
-    border-left: 3px solid #ef4444;
-    color: #fca5a5;
-    border-radius: 4px;
-    font-size: 12px;
-    margin-top: 8px;
-    display: none;
-  }
-
-  .error-message.show {
-    display: block;
-  }
-
-  /* ================== RESPONSIVE ================== */
-  @media (max-width: 400px) {
-    #freqText {
-      font-size: 28px;
-    }
-
-    .preset-buttons {
-      grid-template-columns: repeat(2, 1fr);
-    }
-  }
-  </style>
+/* 🔥 iOS 터치 최적화 */
+#freqRange{
+  touch-action:none;
+  -webkit-user-select:none;
+  user-select:none;
+}
+</style>
 </head>
 
 <body class="bg-neutral-900 text-white max-w-md mx-auto">
 
-  <header class="flex justify-between items-center px-4 py-3 text-lg font-semibold border-b border-neutral-800">
-    <div>
-      <span>FM Radio</span>
-      <div class="clock-display">서울 시간</div>
-    </div>
-    <button id="powerBtn" class="power-button w-9 h-9 rounded-full" aria-label="전원 버튼"></button>
-  </header>
+<header class="flex justify-between items-center px-4 py-3 text-lg font-semibold">
+  <span>FM Radio</span>
+  <button id="powerBtn" class="w-9 h-9 rounded-full bg-neutral-700"></button>
+</header>
 
-  <main class="px-4">
-    <!-- 튜너 프레임 -->
-    <section id="dial" class="relative rounded-xl overflow-hidden bg-gradient-to-b from-neutral-800 to-neutral-900 mt-4" aria-label="FM 튜너">
-      <div id="scale" class="scale" role="presentation"></div>
-      <div id="needle" role="presentation" aria-hidden="true"></div>
-      <input 
-        id="freqRange" 
-        type="range" 
-        min="87.5" 
-        max="108" 
-        step="0.1"
-        class="absolute inset-0 opacity-0 z-20 touch-pan-x"
-        aria-label="주파수 조절"
-        aria-valuemin="87.5"
-        aria-valuemax="108"
-      >
-    </section>
+<div class="px-4">
+  <div id="dial" class="relative rounded-xl overflow-hidden bg-gradient-to-b from-neutral-800 to-neutral-900">
+    <div id="scale" class="scale"></div>
+    <div id="needle"></div>
+    <input id="freqRange" type="range" min="87.5" max="108" step="0.1"
+      class="absolute inset-0 opacity-0 z-20">
+  </div>
 
-    <!-- 튜너 정보 -->
-    <div id="dialInfo">
-      <div id="freqText" role="status">91.9 MHz</div>
-      <div id="stationText" role="status" aria-live="polite">전원 꺼짐</div>
-      <div class="error-message" id="errorMessage" role="alert"></div>
-    </div>
+  <div id="dialInfo">
+  <div class="flex items-center justify-between">
+  <div id="freqText"></div>
+  <div id="stereoLamp" class="stereo"></div>
+</div>
+    <div id="stationText"></div>
+    <div id="nowProgram"></div>
+  </div>
 
-    <!-- 스테레오 표시 -->
-    <div class="flex justify-end mt-3">
-      <div id="stereoLamp" class="stereo-lamp" aria-label="스테레오 신호 표시" title="스테레오 수신 중"></div>
-    </div>
+</div>
 
-    <!-- 음량 제어 -->
-    <div class="volume-container" aria-label="음량 제어">
-      <span class="volume-label">음량</span>
-      <input 
-        id="volumeSlider" 
-        type="range" 
-        min="0" 
-        max="100" 
-        value="50"
-        aria-label="음량 조절"
-        aria-valuemin="0"
-        aria-valuemax="100"
-      >
-      <span class="volume-value" id="volumeValue">50%</span>
-    </div>
+<div id="tabs" class="flex justify-around px-6 mt-6"></div>
+<div id="channelList" class="px-4 py-4"></div>
 
-    <!-- 프리셋 저장/불러오기 -->
-    <div class="preset-section" aria-label="프리셋 관리">
-      <label class="preset-label">빠른 접근 (우클릭으로 저장)</label>
-      <div class="preset-buttons" id="presetButtons"></div>
-    </div>
-  </main>
+<script>
+const MIN=87.5, MAX=108;
+const audio=new Audio();
+const ctx=new (window.AudioContext||window.webkitAudioContext)();
+const noiseGain=ctx.createGain(); noiseGain.gain.value=0;
 
-  <!-- 채널 탭 -->
-  <div id="tabs" class="flex justify-around px-6 mt-6" role="tablist"></div>
+const nowProgram=document.getElementById("nowProgram");
 
-  <!-- 채널 목록 -->
-  <div id="channelList" class="px-4 py-4" role="region" aria-label="채널 목록"></div>
+/* ===== 방송 스케줄 ===== */
+let currentSchedule=null;
 
-  <script>
-  // ================== 설정 ================== //
-  const CONFIG = {
-    MIN_FREQ: 87.5,
-    MAX_FREQ: 108,
-    SCAN_VOLUME: 0.05,
-    PLAY_VOLUME: 0.5
-  };
-
-  const MIN = CONFIG.MIN_FREQ;
-  const MAX = CONFIG.MAX_FREQ;
-
-  // ================== 오디오 컨텍스트 ================== //
-  const audio = new Audio();
-  audio.crossOrigin = "anonymous";
-
-  let audioContext = null;
-  let noiseGain = null;
-  let noiseSource = null;
-
-  function initializeAudioContext() {
-    if (audioContext) return;
-
-    try {
-      audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      noiseGain = audioContext.createGain();
-      noiseGain.gain.value = 0;
-
-      const buffer = audioContext.createBuffer(1, audioContext.sampleRate * 2, audioContext.sampleRate);
-      const data = buffer.getChannelData(0);
-      for (let i = 0; i < data.length; i++) {
-        data[i] = (Math.random() * 2 - 1) * 0.5;
-      }
-
-      noiseSource = audioContext.createBufferSource();
-      noiseSource.buffer = buffer;
-      noiseSource.loop = true;
-      noiseSource.connect(noiseGain).connect(audioContext.destination);
-      noiseSource.start();
-    } catch (error) {
-      console.error('AudioContext 초기화 실패:', error);
-      showError('오디오 초기화 실패');
-    }
+async function loadSchedule(path){
+  try{
+    const r=await fetch(path);
+    currentSchedule=await r.json();
+    updateNowProgram();
+  }catch{
+    currentSchedule=null;
+    nowProgram.textContent='';
   }
+}
 
-  // ================== 채널 데이터 ================== //
-  const channels = [
-    {
-      group: 'SBS',
-      list: [
-        { name: 'SBS 파워FM', freq: 107.7, url: 'https://radio.bsod.kr/stream/?stn=sbs&ch=powerfm' },
-        { name: 'SBS 러브FM', freq: 103.5, url: 'https://radio.bsod.kr/stream/?stn=sbs&ch=lovefm' },
-        { name: 'SBS 고릴라디오M', freq: 95.1, url: 'https://radio.bsod.kr/stream/?stn=sbs&ch=dmb' }
-      ]
-    },
-    {
-      group: 'MBC',
-      list: [
-        { name: 'MBC FM4U', freq: 91.9, url: 'https://radio.bsod.kr/stream/?stn=mbc&ch=fm4u' },
-        { name: 'MBC 표준FM', freq: 95.9, url: 'https://radio.bsod.kr/stream/?stn=mbc&ch=sfm' },
-        { name: 'MBC 올댓뮤직', freq: 100.7, url: 'https://radio.bsod.kr/stream/?stn=mbc&ch=chm' }
-      ]
-    },
-    {
-      group: 'KBS',
-      list: [
-        { name: 'KBS 1Radio', freq: 97.3, url: 'https://radio.bsod.kr/stream/?stn=kbs&ch=1radio' },
-        { name: 'KBS HappyFM', freq: 106.1, url: 'https://radio.bsod.kr/stream/?stn=kbs&ch=2radio' },
-        { name: 'KBS 3Radio', freq: 104.9, url: 'https://radio.bsod.kr/stream/?stn=kbs&ch=3radio' },
-        { name: 'KBS ClassicFM', freq: 93.1, url: 'https://radio.bsod.kr/stream/?stn=kbs&ch=1fm' },
-        { name: 'KBS CoolFM', freq: 89.1, url: 'https://radio.bsod.kr/stream/?stn=kbs&ch=2fm' }
-      ]
-    },
-    {
-      group: 'ETC',
-      list: [
-        { name: 'EBS FM', freq: 104.5, url: 'https://radio.bsod.kr/stream/?stn=ebs' },
-        { name: 'TBS FM', freq: 95.1, url: 'https://radio.bsod.kr/stream/?stn=tbs&ch=fm' },
-        { name: 'TBS eFM', freq: 101.3, url: 'https://radio.bsod.kr/stream/?stn=tbs&ch=efm' },
-        { name: 'CBS 표준FM', freq: 98.1, url: 'https://radio.bsod.kr/stream/?stn=cbs&ch=sfm' },
-        { name: 'CBS 음악FM', freq: 93.9, url: 'https://radio.bsod.kr/stream/?stn=cbs&ch=mfm' },
-        { name: 'CBS JOY4U', freq: 90.1, url: 'https://radio.bsod.kr/stream/?stn=cbs&ch=joy4u' }
-      ]
-    }
-  ];
-
-  const flatChannels = channels.flatMap(group => group.list);
-
-  // ================== 상태 관리 ================== //
-  let state = {
-    power: false,
-    activeGroup: null,
-    currentStation: null,
-    presets: loadPresets(),
-    currentFreq: 91.9
-  };
-
-  // ================== DOM 요소 ================== //
-  const scale = document.getElementById('scale');
-  const range = document.getElementById('freqRange');
-  const needle = document.getElementById('needle');
-  const freqText = document.getElementById('freqText');
-  const stationText = document.getElementById('stationText');
-  const stereo = document.getElementById('stereoLamp');
-  const powerBtn = document.getElementById('powerBtn');
-  const tabs = document.getElementById('tabs');
-  const channelList = document.getElementById('channelList');
-  const volumeSlider = document.getElementById('volumeSlider');
-  const volumeValue = document.getElementById('volumeValue');
-  const presetButtons = document.getElementById('presetButtons');
-  const errorMessage = document.getElementById('errorMessage');
-
-  // ================== 스케일 생성 ================== //
-  function createScale() {
-    scale.innerHTML = '';
-    for (let freq = MIN; freq <= MAX + 0.001; freq += 0.1) {
-      const tick = document.createElement('div');
-      tick.className = 'frequency-tick';
-      const step = Math.round((freq * 10) % 10);
-
-      if (step === 0) {
-        tick.classList.add('big');
-        tick.innerHTML = `<span>${Math.round(freq)}</span>`;
-      } else if (step === 5) {
-        tick.classList.add('mid');
-      } else {
-        tick.classList.add('small');
-      }
-      scale.appendChild(tick);
-    }
-  }
-
-  // ================== 시간 표시 ================== //
-  function updateClock() {
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString('ko-KR', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    });
-    document.querySelector('.clock-display').textContent = timeStr;
-  }
-
-  // ================== 바늘 업데이트 ================== //
-  function updateNeedle(freq) {
-    const percentage = ((freq - MIN) / (MAX - MIN)) * 100;
-    needle.style.left = percentage + '%';
-    freqText.textContent = freq.toFixed(1) + ' MHz';
-    state.currentFreq = freq;
-    range.setAttribute('aria-valuenow', freq.toFixed(1));
-  }
-
-  // ================== 에러 메시지 ================== //
-  function showError(message) {
-    errorMessage.textContent = message;
-    errorMessage.classList.add('show');
-    setTimeout(() => {
-      errorMessage.classList.remove('show');
-    }, 4000);
-  }
-
-  // ================== 스테이션 스냅 ================== //
-  function snapTo(freq) {
-    const nearest = flatChannels.reduce((a, b) =>
-      Math.abs(b.freq - freq) < Math.abs(a.freq - freq) ? b : a
-    );
-
-    range.value = nearest.freq;
-    updateNeedle(nearest.freq);
-
-    if (!state.power) return;
-
-    if (noiseGain) noiseGain.gain.value = 0;
-    stereo.classList.add('on');
-
-    state.currentStation = nearest;
-    updateActiveChannel(nearest.freq);
-
-    playStation(nearest);
-    stationText.textContent = nearest.name;
-  }
-
-  // ================== 스테이션 재생 ================== //
-  function playStation(station) {
-    audio.src = station.url;
-    audio.volume = CONFIG.PLAY_VOLUME * (volumeSlider.value / 100);
-
-    const playPromise = audio.play();
-
-    if (playPromise !== undefined) {
-      playPromise
-        .then(() => {})
-        .catch(error => {
-          console.error('재생 실패:', error);
-          showError('스트림 재생 불가 - 네트워크 또는 브라우저 설정 확인');
-
-          if (noiseGain) noiseGain.gain.value = CONFIG.SCAN_VOLUME;
-        });
-    }
-  }
-
-  // ================== 채널 목록 표시 ================== //
-  function openList() {
-    channelList.classList.add('open');
-    channelList.style.height = channelList.scrollHeight + 'px';
-  }
-
-  function closeList() {
-    channelList.style.height = channelList.scrollHeight + 'px';
-    requestAnimationFrame(() => {
-      channelList.style.height = '0px';
-      channelList.classList.remove('open');
-    });
-  }
-
-  // ================== 활성 채널 업데이트 ================== //
-  function updateActiveChannel(freq) {
-    const items = document.querySelectorAll('.channel-item');
-    items.forEach(item => {
-      const itemFreq = parseFloat(item.dataset.freq);
-      if (Math.abs(itemFreq - freq) < 0.05) {
-        item.classList.add('active');
-      } else {
-        item.classList.remove('active');
-      }
-    });
-  }
-
-  // ================== 탭 생성 ================== //
-  function createTabs() {
-    tabs.innerHTML = '';
-    channels.forEach(group => {
-      const tab = document.createElement('div');
-      tab.className = 'tab';
-      tab.textContent = group.group;
-      tab.setAttribute('role', 'tab');
-      tab.setAttribute('aria-selected', 'false');
-
-      tab.onclick = () => {
-        if (state.activeGroup === group) {
-          closeList();
-          state.activeGroup = null;
-          document.querySelectorAll('.tab').forEach(t => {
-            t.classList.remove('active');
-            t.setAttribute('aria-selected', 'false');
-          });
-          return;
-        }
-
-        state.activeGroup = group;
-        document.querySelectorAll('.tab').forEach(t => {
-          t.classList.remove('active');
-          t.setAttribute('aria-selected', 'false');
-        });
-        tab.classList.add('active');
-        tab.setAttribute('aria-selected', 'true');
-
-        channelList.innerHTML = '';
-        group.list.forEach(station => {
-          const item = document.createElement('div');
-          item.className = 'channel-item flex justify-between bg-neutral-800 rounded-lg p-3 mb-2';
-          item.dataset.freq = station.freq;
-          item.setAttribute('role', 'button');
-          item.setAttribute('tabindex', '0');
-
-          item.innerHTML = `
-            <span>${station.name}</span>
-            <span class="text-xs text-gray-400">${station.freq.toFixed(1)}</span>
-          `;
-
-          if (state.currentStation && Math.abs(state.currentStation.freq - station.freq) < 0.05) {
-            item.classList.add('active');
-          }
-
-          const selectChannel = () => {
-            snapTo(station.freq);
-            closeList();
-            document.querySelectorAll('.tab').forEach(t => {
-              t.classList.remove('active');
-              t.setAttribute('aria-selected', 'false');
-            });
-            state.activeGroup = null;
-          };
-
-          item.onclick = selectChannel;
-          item.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              selectChannel();
-            }
-          });
-
-          channelList.appendChild(item);
-        });
-
-        openList();
-      };
-
-      tabs.appendChild(tab);
-    });
-  }
-
-  // ================== 전원 제어 ================== //
-  powerBtn.onclick = () => {
-    initializeAudioContext();
-    state.power = !state.power;
-    powerBtn.classList.toggle('on', state.power);
-
-    if (!state.power) {
-      audio.pause();
-      audio.src = '';
-      if (noiseGain) noiseGain.gain.value = 0;
-      stereo.classList.remove('on');
-      stationText.textContent = '전원 꺼짐';
-      stationText.setAttribute('aria-live', 'assertive');
-    } else {
-      stationText.textContent = '예열중...';
-      stationText.setAttribute('aria-live', 'polite');
-      if (noiseGain) noiseGain.gain.value = CONFIG.SCAN_VOLUME;
-      setTimeout(() => snapTo(parseFloat(range.value)), 800);
-    }
-  };
-
-  // ================== 범위 입력 이벤트 ================== //
-  range.addEventListener('input', () => {
-    initializeAudioContext();
-    const currentFreq = parseFloat(range.value);
-    updateNeedle(currentFreq);
-
-    if (!state.power) {
-      if (noiseGain) noiseGain.gain.value = 0;
-      stereo.classList.remove('on');
-      stationText.textContent = '';
+function dayKey(){
+  const d=new Date().getDay();
+  return d===6?'saturday':d===0?'sunday':'weekday';
+}
+function toMin(t){
+  let [h,m]=t.split(":").map(Number);
+  if(h<5) h+=24;
+  return h*60+m;
+}
+function updateNowProgram(){
+  if(!currentSchedule) return;
+  const now=new Date();
+  let nowMin=now.getHours()*60+now.getMinutes();
+  if(now.getHours()<5) nowMin+=1440;
+  const list=currentSchedule.schedule[dayKey()]||currentSchedule.schedule.weekday;
+  for(let i=0;i<list.length;i++){
+    const cur=toMin(list[i].time||list[i].start);
+    const next=list[i+1]?toMin(list[i+1].time||list[i+1].start):9999;
+    if(nowMin>=cur&&nowMin<next){
+      nowProgram.textContent=list[i].title;
       return;
     }
+  }
+  nowProgram.textContent='';
+}
+setInterval(updateNowProgram,60000);
 
-    if (noiseGain) noiseGain.gain.value = CONFIG.SCAN_VOLUME;
+/* ===== 노이즈 ===== */
+const buffer=ctx.createBuffer(1,ctx.sampleRate*2,ctx.sampleRate);
+const data=buffer.getChannelData(0);
+for(let i=0;i<data.length;i++) data[i]=(Math.random()*2-1)*0.5;
+const noise=ctx.createBufferSource();
+noise.buffer=buffer; noise.loop=true;
+noise.connect(noiseGain).connect(ctx.destination);
+noise.start();
+
+/* ===== 채널 ===== */
+const channels=[
+{group:'SBS',list:[
+{name:'SBS 파워FM',freq:107.7,url:'https://radio.bsod.kr/stream/?stn=sbs&ch=powerfm',json:'schedule/sbs-powerfm.json'},
+{name:'SBS 러브FM',freq:103.5,url:'https://radio.bsod.kr/stream/?stn=sbs&ch=lovefm',json:'schedule/sbs-lovefm.json'},
+{name:'SBS 고릴라디오M',freq:95.1,url:'https://radio.bsod.kr/stream/?stn=sbs&ch=dmb',json:'schedule/sbs-gorillam.json'}
+]},
+{group:'MBC',list:[
+{name:'MBC FM4U',freq:91.9,url:'https://radio.bsod.kr/stream/?stn=mbc&ch=fm4u',json:'schedule/mbc-fm4u.json'},
+{name:'MBC 표준FM',freq:95.9,url:'https://radio.bsod.kr/stream/?stn=mbc&ch=sfm',json:'schedule/mbc-standardfm.json'},
+{name:'MBC 올댓뮤직',freq:100.7,url:'https://radio.bsod.kr/stream/?stn=mbc&ch=chm',json:'schedule/mbc-allthatmusic.json'}
+]},
+{group:'KBS',list:[
+{name:'KBS 1라디오',freq:97.3,url:'https://radio.bsod.kr/stream/?stn=kbs&ch=1radio',json:'schedule/kbs-1radio.json'},
+{name:'KBS 2라디오',freq:106.1,url:'https://radio.bsod.kr/stream/?stn=kbs&ch=2radio',json:'schedule/kbs-happyfm.json'},
+{name:'KBS 3라디오',freq:104.9,url:'https://radio.bsod.kr/stream/?stn=kbs&ch=3radio',json:'schedule/kbs-3radio.json'},
+{name:'KBS 1FM',freq:93.1,url:'https://radio.bsod.kr/stream/?stn=kbs&ch=1fm',json:'schedule/kbs-classicfm.json'},
+{name:'KBS 2FM',freq:89.1,url:'https://radio.bsod.kr/stream/?stn=kbs&ch=2fm',json:'schedule/kbs-coolfm.json'}
+]},
+{group:'ETC',list:[
+{name:'EBS FM',freq:104.5,url:'https://radio.bsod.kr/stream/?stn=ebs'},
+{name:'TBS FM',freq:95.1,url:'https://radio.bsod.kr/stream/?stn=tbs&ch=fm'},
+{name:'TBS eFM',freq:101.3,url:'https://radio.bsod.kr/stream/?stn=tbs&ch=efm'},
+{name:'CBS 표준FM',freq:98.1,url:'https://radio.bsod.kr/stream/?stn=cbs&ch=sfm'},
+{name:'CBS 음악FM',freq:93.9,url:'https://radio.bsod.kr/stream/?stn=cbs&ch=mfm'},
+{name:'CBS JOY4U',freq:90.1,url:'https://radio.bsod.kr/stream/?stn=cbs&ch=joy4u'}
+]}
+];
+
+/* ===== UI ===== */
+const scale=document.getElementById('scale');
+for(let f=MIN;f<=MAX+0.001;f+=0.1){
+  const t=document.createElement('div');
+  t.className='tick';
+  const step=Math.round((f*10)%10);
+  if(step===0){t.classList.add('big');t.innerHTML=`<span>${Math.round(f)}</span>`;}
+  else if(step===5)t.classList.add('mid');
+  else t.classList.add('small');
+  scale.appendChild(t);
+}
+
+let power=false,activeGroup=null;
+const range=document.getElementById('freqRange');
+const needle=document.getElementById('needle');
+const freqText=document.getElementById('freqText');
+const stationText=document.getElementById('stationText');
+const stereo=document.getElementById('stereoLamp');
+const powerBtn=document.getElementById('powerBtn');
+const tabs=document.getElementById('tabs');
+const channelList=document.getElementById('channelList');
+
+function updateNeedle(f){
+  needle.style.left=((f-MIN)/(MAX-MIN)*dial.clientWidth)+'px';
+  freqText.textContent=f.toFixed(1)+' MHz';
+}
+
+async function snapTo(freq){
+  const flat=channels.flatMap(g=>g.list);
+  const nearest=flat.reduce((a,b)=>
+    Math.abs(b.freq-freq)<Math.abs(a.freq-freq)?b:a
+  );
+
+  range.value=nearest.freq;
+  updateNeedle(nearest.freq);
+  if(!power) return;
+
+  noiseGain.gain.value=0;
+  stereo.classList.add('on');
+
+  audio.src=nearest.url;
+  audio.volume=1;
+
+  try{
+    await audio.play();
+    stationText.textContent=nearest.name;
+  }catch(e){
     stereo.classList.remove('on');
-    stationText.textContent = '스캔중...';
+    noiseGain.gain.value=0.05;
+    stationText.textContent='재생 오류: 잠시 후 다시 시도해 주세요';
+    return;
+  }
+
+  if(nearest.json) loadSchedule(nearest.json);
+  else{currentSchedule=null;nowProgram.textContent='';}
+}
+
+range.addEventListener('input',()=>{
+  ctx.resume();
+  updateNeedle(+range.value);
+  if(!power){
+    noiseGain.gain.value=0;
+    stereo.classList.remove('on');
+    stationText.textContent='';
+    return;
+  }
+  noiseGain.gain.value=0.05;
+  stereo.classList.remove('on');
+  stationText.textContent='스캔중...';
+});
+range.addEventListener('change',()=>snapTo(+range.value));
+
+powerBtn.onclick=()=>{
+  ctx.resume();
+  power=!power;
+  powerBtn.classList.toggle('power-on',power);
+  if(!power){
+    audio.pause();
+    noiseGain.gain.value=0;
+    stereo.classList.remove('on');
+    stationText.textContent='전원 꺼짐';
+    nowProgram.textContent='';
+  }else{
+    stationText.textContent='예열중...';
+    noiseGain.gain.value=0.05;
+    setTimeout(()=>snapTo(+range.value),800);
+  }
+};
+
+/* === 오디오 에러 처리 추가 === */
+audio.addEventListener('error', () => {
+  stereo.classList.remove('on');
+  noiseGain.gain.value = 0.05;
+  stationText.textContent = '재생 오류: 다른 채널을 선택해 보세요';
+});
+
+/* ===== iOS 터치 감도 보정 ===== */
+let lastTouchX=null;
+const isIOS=/iPhone|iPad|iPod/i.test(navigator.userAgent);
+if(isIOS){
+  range.addEventListener('touchstart',e=>{
+    lastTouchX=e.touches[0].clientX;
   });
-
-  range.addEventListener('change', () => {
-    snapTo(parseFloat(range.value));
+  range.addEventListener('touchmove',e=>{
+    e.preventDefault();
+    if(lastTouchX===null) return;
+    const x=e.touches[0].clientX;
+    const dx=x-lastTouchX;
+    lastTouchX=x;
+    const sensitivity=0.015;
+    let v=parseFloat(range.value);
+    v+=dx*sensitivity;
+    v=Math.max(MIN,Math.min(MAX,v));
+    range.value=v.toFixed(1);
+    range.dispatchEvent(new Event('input'));
+  },{passive:false});
+  range.addEventListener('touchend',()=>{
+    lastTouchX=null;
+    range.dispatchEvent(new Event('change'));
   });
+}
 
-  // ================== 음량 제어 ================== //
-  volumeSlider.addEventListener('input', (e) => {
-    const volume = e.target.value;
-    volumeValue.textContent = volume + '%';
+/* ===== 채널 리스트 ===== */
+function closeList(){
+  channelList.style.height=channelList.scrollHeight+'px';
+  requestAnimationFrame(()=>{
+    channelList.style.height='0px';
+    channelList.classList.remove('open');
+  });
+}
 
-    if (audio && state.power && state.currentStation) {
-      audio.volume = CONFIG.PLAY_VOLUME * (volume / 100);
+channels.forEach(g=>{
+  const tab=document.createElement('div');
+  tab.className='tab';
+  tab.textContent=g.group;
+  tab.onclick=()=>{
+    if(activeGroup===g){
+      closeList();
+      activeGroup=null;
+      document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+      return;
     }
-  });
+    activeGroup=g;
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');
+    channelList.innerHTML='';
+    g.list.forEach(ch=>{
+      const d=document.createElement('div');
+      d.className="channel-item flex justify-between bg-neutral-800 rounded-lg p-3 mb-2 cursor-pointer";
+      d.innerHTML=`<span>${ch.name}</span><span class="text-xs text-gray-400">${ch.freq.toFixed(1)}</span>`;
+      d.onclick=()=>{
+        snapTo(ch.freq);
+        closeList();
+        activeGroup=null;
+        document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+      };
+      channelList.appendChild(d);
+    });
+    channelList.classList.add('open');
+    channelList.style.height=channelList.scrollHeight+'px';
+  };
+  tabs.appendChild(tab);
+});
 
-  // ================== 키보드 제어 ================== //
-  document.addEventListener('keydown', (e) => {
-    if (e.target.id === 'volumeSlider' || e.target.id === 'freqRange') return;
+range.value=91.9;
+updateNeedle(91.9);
+stationText.textContent='전원 꺼짐';
+</script>
 
-    if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
-      e.preventDefault();
-      range.value = Math.min(parseFloat(range.value) + 0.1, MAX);
-      range.dispatchEvent(new Event('input'));
-    } else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
-      e.preventDefault();
-      range.value = Math.max(parseFloat(range.value) - 0.1, MIN);
-      range.dispatchEvent(new Event('input'));
-    } else if (e.key === ' ') {
-      e.preventDefault();
-      powerBtn.click();
-    }
-  });
-
-  // ================== 프리셋 관리 ================== //
-  function savePresets() {
-    localStorage.setItem('fm-radio-presets', JSON.stringify(state.presets));
-  }
-
-  function loadPresets() {
-    const saved = localStorage.getItem('fm-radio-presets');
-    return saved ? JSON.parse(saved) : [null, null, null];
-  }
-
-  function createPresetButtons() {
-    presetButtons.innerHTML = '';
-    for (let i = 0; i < 3; i++) {
-      const btn = document.createElement('button');
-      btn.className = 'preset-btn';
-      const preset = state.presets[i];
-
-      if (preset) {
-        const station = flatChannels.find(s => Math.abs(s.freq - preset) < 0.05);
-        btn.textContent = station ? station.name.substring(0, 8) : preset.toFixed(1);
-        btn.classList.add('filled');
-      } else {
-        btn.textContent = `P${i + 1}`;
-      }
-
-      btn.addEventListener('click', () => {
-        if (preset != null) {
-          snapTo(preset);
-          range.value = preset;
-          updateNeedle(preset);
-        }
-      });
-
-      btn.addEventListener('contextmenu', (e) => {
-        e.preventDefault();
-        state.presets[i] = state.currentFreq;
-        savePresets();
-        createPresetButtons();
-      });
-
-      btn.title = preset
-        ? `클릭: ${preset.toFixed(1)} MHz로 이동\n우클릭: 현재 주파수로 저장`
-        : '우클릭: 현재 주파수 저장';
-
-      presetButtons.appendChild(btn);
-    }
-  }
-
-  // ================== 초기화 ================== //
-  function initialize() {
-    createScale();
-    createTabs();
-    createPresetButtons();
-    range.value = state.currentFreq;
-    updateNeedle(state.currentFreq);
-    stationText.textContent = '전원 꺼짐';
-    updateClock();
-    setInterval(updateClock, 1000);
-  }
-
-  initialize();
-  </script>
 </body>
 </html>
