@@ -219,29 +219,32 @@ async function snapTo(freq){
   updateNeedle(nearest.freq);
   if(!power) return;
 
-  // 튜닝 시작: 일단 노이즈는 줄이되 완전히 끄지는 않음
   noiseGain.gain.value=0.05;
   stereo.classList.add('on');
+  
+  // 로딩 메시지 먼저 표시
+  stationText.textContent = nearest.name + ' 연결 중...';
 
   audio.src=nearest.url;
   audio.volume=1;
 
   try{
     await audio.play();
-    stationText.textContent=nearest.name;
-
+    stationText.textContent=nearest.name;  // 성공하면 채널명만
+    
     const currentTitle = nowProgram.textContent || nearest.name;
     updateMediaSession(nearest, currentTitle);
   }catch(e){
     stereo.classList.remove('on');
     noiseGain.gain.value=0.05;
-    stationText.textContent='재생 오류: 잠시 후 다시 시도해 주세요';
+    stationText.textContent='연결 실패';  // 진짜 실패했을 때만
     return;
   }
 
   if(nearest.json) loadSchedule(nearest.json);
   else{currentSchedule=null;nowProgram.textContent='';}
 }
+
 
 /* === 방송이 실제로 시작되면 노이즈 완전히 끄기 === */
 audio.addEventListener('playing', () => {
@@ -287,11 +290,13 @@ powerBtn.onclick=()=>{
 };
 
 /* === 오디오 에러 처리 === */
+  
 audio.addEventListener('error', () => {
   stereo.classList.remove('on');
   noiseGain.gain.value = 0.05;
-  stationText.textContent = '재생 오류: 다른 채널을 선택해 보세요';
+  stationText.textContent = '방송 오류';  // 또는 '스트림 오류'
 });
+
 
 /* ===== iOS 터치 감도 보정 ===== */
 let lastTouchX=null;
