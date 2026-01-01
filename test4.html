@@ -1237,40 +1237,14 @@ range.addEventListener('mouseup', () => {
 // 클릭음 및 햅틱 피드백
 // ========================================
 function playClickSound() {
-  // Web Audio API로 짧은 클릭음 생성
-  const clickCtx = new (window.AudioContext || window.webkitAudioContext)();
-  const oscillator = clickCtx.createOscillator();
-  const gainNode = clickCtx.createGain();
-  
-  oscillator.connect(gainNode);
-  gainNode.connect(clickCtx.destination);
-  
-  oscillator.frequency.value = 800;  // 주파수 (높을수록 높은 음)
-  oscillator.type = 'sine';  // 부드러운 사인파
-  
-  gainNode.gain.setValueAtTime(0.3, clickCtx.currentTime);
-  gainNode.gain.exponentialRampToValueAtTime(0.01, clickCtx.currentTime + 0.05);
-  
-  oscillator.start(clickCtx.currentTime);
-  oscillator.stop(clickCtx.currentTime + 0.05);
+  // MP3 파일 재생
+  const clickAudio = new Audio('sound/button.mp3');
+  clickAudio.volume = 0.5;  // 볼륨 조절 (0.0 ~ 1.0)
+  clickAudio.play().catch(err => {
+    console.log('클릭 사운드 재생 실패:', err);
+  });
 }
 
-function triggerHaptic() {
-  // 햅틱 피드백 (모바일에서만 작동)
-  if (navigator.vibrate) {
-    navigator.vibrate(10);  // 10ms 진동
-  }
-  
-  // iOS용 대체 (일부 브라우저)
-  if (window.Taptic && window.Taptic.impact) {
-    window.Taptic.impact('light');
-  }
-}
-
-function feedbackOnClick() {
-  playClickSound();
-  triggerHaptic();
-}
 
 
 
