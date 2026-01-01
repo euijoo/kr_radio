@@ -246,6 +246,76 @@ body {
 <div id="channelList" class="px-4 py-4"></div>
 
 <script>
+
+// ========================================
+// 주파수 스캔 시 방송 혼합 효과 (수정)
+// ========================================
+let scanAudios = [];
+let scanInterval = null;
+let lastTunedFreq = null;
+let originalVolume = 1;
+let isDirectTuning = false;
+let isScanningActive = false;
+
+function startScan(currentFreq) {
+  if (isDirectTuning || isChanging) {
+    return;
+  }
+  
+  isScanningActive = true;
+  
+  if (lastTunedFreq && Math.abs(currentFreq - lastTunedFreq) >= 2 && !audio.paused) {
+    const fadeOutInterval = setInterval(() => {
+      if (audio.volume > 0.05) {
+        audio.volume = Math.max(0, audio.volume - 0.15);
+      } else {
+        audio.pause();
+        audio.volume = originalVolume;
+        clearInterval(fadeOutInterval);
+      }
+    }, 30);
+  }
+  
+  stopScan();
+  
+  const flat = channels.flatMap(g => g.list);
+  const nearbyStations = flat.filter(ch => 
+    Math.abs(ch.freq - currentFreq) <= 2
+  );
+  
+  nearbyStations.forEach(station => {
+    const distance = Math.abs(station.freq - currentFreq);
+    const volume = Math.max(0, 1 - (distance / 2));
+    
+    if (volume > 0.1) {
+      const tempAudio = new Audio(station.url);
+      tempAudio.volume = volume * 0.4;
+      tempAudio.play().catch(() => {});
+      scanAudios.push(tempAudio);
+    }
+  });
+  
+  const nearestStation = nearbyStations.reduce((a, b) => 
+    Math.abs(b.freq - currentFreq) < Math.abs(a.freq - currentFreq) ? b : a
+  , {freq: 0});
+  
+  const distanceToNearest = Math.abs(nearestStation.freq - currentFreq);
+  noiseGain.gain.value = Math.min(0.2, distanceToNearest * 0.08);
+}
+
+function stopScan() {
+  scanAudios.forEach(audio => {
+    audio.pause();
+    audio.src = '';
+  });
+  scanAudios = [];
+  isScanningActive = false;
+  noiseGain.gain.value = 0;  // ✨ 노이즈 완전히 끄기
+}
+
+
+
+
 // ========================================
 // 상수 및 전역 변수
 // ========================================
@@ -479,13 +549,22 @@ function updateMediaSession(channel, programTitle) {
 }
 
 // ========================================
-// 채널 튜닝
+// 채널 튜닝 (수정)
 // ========================================
 async function snapTo(freq) {
+  console.log('snapTo 호출:', freq);
+  
+  isDirectTuning = true;
+  stopScan();  // ✨ 스캔 즉시 중지 (노이즈 포함)
+  
+  audio.volume = originalVolume;
+  
   const flat = channels.flatMap(g => g.list);
   const nearest = flat.reduce((a, b) =>
     Math.abs(b.freq - freq) < Math.abs(a.freq - freq) ? b : a
   );
+
+  console.log('가장 가까운 채널:', nearest.name, nearest.freq);
 
   range.value = nearest.freq;
   updateNeedle(nearest.freq);
@@ -500,10 +579,13 @@ async function snapTo(freq) {
   
   if (!power) {
     stereo.classList.remove('on');
+    isDirectTuning = false;
+    noiseGain.gain.value = 0;  // ✨ 노이즈 끄기
     return;
   }
 
-  noiseGain.gain.value = 0.05;
+  // ✨ 튜닝 시작 시 노이즈 0으로 설정
+  noiseGain.gain.value = 0;
   
   setTimeout(() => {
     if (audio.src === nearest.url) {
@@ -511,37 +593,66 @@ async function snapTo(freq) {
     }
   }, 50);
 
+  if (audio.src === nearest.url && !audio.paused) {
+    console.log('같은 채널 계속 재생');
+    stationText.textContent = nearest.name;
+    lastTunedFreq = nearest.freq;
+    noiseGain.gain.value = 0;  // ✨ 노이즈 확실히 끄기
+    isDirectTuning = false;
+    return;
+  }
+
+  console.log('새 채널 재생 시작:', nearest.url);
   audio.src = nearest.url;
-  audio.volume = 1;
+  audio.volume = originalVolume;
 
   try {
+    // ✨ 재생 전에 노이즈를 약간 켜서 연결 중임을 표시
+    noiseGain.gain.value = 0.05;
+    
     await audio.play();
+    console.log('재생 성공');
     stationText.textContent = nearest.name;
+    lastTunedFreq = nearest.freq;
     
     const currentTitle = nowProgram.textContent || nearest.name;
     updateMediaSession(nearest, currentTitle);
+    
+    // ✨ 재생 성공 후 노이즈 완전히 끄기는 'playing' 이벤트에서 처리
   } catch (e) {
+    console.error('재생 오류:', e);
     stereo.classList.remove('on');
-    noiseGain.gain.value = 0.05;
+    noiseGain.gain.value = 0.05;  // 오류 시에만 노이즈 유지
     stationText.textContent = '연결 실패';
+  } finally {
+    setTimeout(() => {
+      isDirectTuning = false;
+      console.log('isDirectTuning 해제');
+    }, 200);  // ✨ 타이밍 여유 추가
   }
 }
-
 // ========================================
-// 오디오 이벤트 리스너
+// 오디오 이벤트 리스너 (수정)
 // ========================================
 audio.addEventListener('playing', () => {
   if (!power) return;
-  noiseGain.gain.value = 0;
+  noiseGain.gain.value = 0;  // ✨ 재생 시작되면 노이즈 완전히 끄기
   stereo.classList.add('on');
+  console.log('방송 재생 시작 - 노이즈 OFF');
 });
 
 audio.addEventListener('waiting', () => {
   stereo.classList.remove('on');
+  if (power && !isScanningActive) {  // ✨ 스캔 중이 아닐 때만
+    noiseGain.gain.value = 0.05;  // 버퍼링 중 약간의 노이즈
+  }
 });
 
 audio.addEventListener('pause', () => {
   stereo.classList.remove('on');
+  if (power && !isScanningActive) {  // ✨ 스캔 중이 아닐 때만
+    noiseGain.gain.value = 0.05;
+  }
 });
 
 audio.addEventListener('error', () => {
@@ -551,12 +662,15 @@ audio.addEventListener('error', () => {
 });
 
 // ========================================
-// 주파수 슬라이더 이벤트
+// 주파수 슬라이더 이벤트 (수정)
 // ========================================
+let inputDebounceTimer = null;
+
 range.addEventListener('input', () => {
   ctx.resume();
   updateNeedle(+range.value);
   clearTimeout(inputTimer);
+  clearTimeout(inputDebounceTimer);
   
   if (!power) {
     noiseGain.gain.value = 0;
@@ -564,28 +678,58 @@ range.addEventListener('input', () => {
     return;
   }
   
-  noiseGain.gain.value = 0.05;
-  
-  if (!isChanging && !isTouching) {
+  // 스캔 효과는 수동 슬라이더 조작 시에만
+  if (!isChanging && !isTouching && !isDirectTuning) {
     stationText.textContent = '스캔중...';
+    startScan(+range.value);
   }
   
   if (!isChanging) {
     stereo.classList.remove('on');
   }
+  
+  // 0.5초 동안 입력이 없으면 자동으로 튜닝
+  inputDebounceTimer = setTimeout(() => {
+    if (!isChanging && !isDirectTuning) {
+      console.log('자동 튜닝 실행:', +range.value);
+      stopScan();  // ✨ 튜닝 전 스캔 중지
+      range.dispatchEvent(new Event('change'));
+    }
+  }, 500);
+  
+  // ✨ 스캔 정리 타이밍을 디바운스와 맞춤
+  inputTimer = setTimeout(() => {
+    if (!isDirectTuning && !isChanging) {
+      stopScan();
+    }
+  }, 550);  // 디바운스보다 약간 늦게
 });
 
 range.addEventListener('change', () => {
+  console.log('change 이벤트 발생:', +range.value, 'isChanging:', isChanging);
+  
+  if (isChanging) {
+    console.log('이미 처리 중이므로 무시');
+    return;
+  }
+  
   isChanging = true;
+  stopScan();  // ✨ change 시작 시 즉시 스캔 중지
+  
   snapTo(+range.value).then(() => {
     setTimeout(() => {
       isChanging = false;
+      console.log('튜닝 완료');
     }, 100);
+  }).catch(err => {
+    console.error('튜닝 오류:', err);
+    isChanging = false;
   });
 });
 
+
 // ========================================
-// 전원 버튼
+// 전원 버튼 (수정)
 // ========================================
 powerBtn.onclick = () => {
   ctx.resume();
@@ -594,10 +738,13 @@ powerBtn.onclick = () => {
   
   if (!power) {
     audio.pause();
-    noiseGain.gain.value = 0;
+    audio.volume = originalVolume;
+    stopScan();  // ✨ 스캔 중지 (노이즈 포함)
+    noiseGain.gain.value = 0;  // ✨ 명시적으로 노이즈 끄기
     stereo.classList.remove('on');
     stationText.textContent = '전원 꺼짐';
     nowProgram.textContent = '';
+    lastTunedFreq = null;
     if ('mediaSession' in navigator) {
       navigator.mediaSession.metadata = null;
     }
@@ -609,13 +756,14 @@ powerBtn.onclick = () => {
 };
 
 // ========================================
-// iOS 터치 최적화
+// iOS 터치 최적화 (수정)
 // ========================================
 const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
 if (isIOS) {
   range.addEventListener('touchstart', e => {
     isTouching = true;
     lastTouchX = e.touches[0].clientX;
+    clearTimeout(inputDebounceTimer);  // ✨ 터치 시작 시 타이머 클리어
   });
   
   range.addEventListener('touchmove', e => {
@@ -635,13 +783,18 @@ if (isIOS) {
   range.addEventListener('touchend', () => {
     isTouching = false;
     lastTouchX = null;
-    isChanging = true;
-    range.dispatchEvent(new Event('change'));
+    
+    // ✨ touchend에서 명시적으로 change 이벤트 발생
+    setTimeout(() => {
+      if (!isChanging) {
+        console.log('터치 종료 - change 이벤트 발생');
+        range.dispatchEvent(new Event('change'));
+      }
+    }, 100);
   });
 }
-
 // ========================================
-// 채널 리스트 UI
+// 채널 리스트 UI (수정)
 // ========================================
 function closeList() {
   channelList.style.height = channelList.scrollHeight + 'px';
@@ -670,8 +823,12 @@ channels.forEach(g => {
       const d = document.createElement('div');
       d.className = "channel-item flex justify-between bg-neutral-800 rounded-lg p-3 mb-2 cursor-pointer";
       d.innerHTML = `<span>${ch.name}</span><span class="text-xs text-gray-400">${ch.freq.toFixed(1)}</span>`;
-      d.onclick = () => {
-        snapTo(ch.freq);
+      d.onclick = async () => {  // ✨ async 추가
+        isDirectTuning = true;  // ✨ 클릭 즉시 플래그 설정
+        stopScan();  // ✨ 스캔 즉시 중지
+        
+        await snapTo(ch.freq);  // ✨ await 추가
+        
         closeList();
         activeGroup = null;
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -679,19 +836,17 @@ channels.forEach(g => {
       channelList.appendChild(d);
     });
     
-    // ✨ 수정된 부분: DOM 렌더링 후 높이 계산
     channelList.classList.add('open');
-    channelList.style.height = '0px';  // 먼저 0으로 설정
+    channelList.style.height = '0px';
     
     requestAnimationFrame(() => {
-      requestAnimationFrame(() => {  // 이중 requestAnimationFrame으로 확실한 렌더링 보장
+      requestAnimationFrame(() => {
         channelList.style.height = channelList.scrollHeight + 'px';
       });
     });
   };
   tabs.appendChild(tab);
 });
-
 // ========================================
 // 현재 시간 표시
 // ========================================
