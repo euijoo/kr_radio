@@ -880,7 +880,7 @@ if (isIOS) {
     const x = e.touches[0].clientX;
     const dx = x - lastTouchX;
     lastTouchX = x;
-    const sensitivity = 0.022;
+    const sensitivity = 0.011;  // ✅ 더 부드럽게
     let v = parseFloat(range.value);
     v += dx * sensitivity;
     v = Math.max(MIN, Math.min(MAX, v));
