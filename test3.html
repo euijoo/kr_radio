@@ -251,7 +251,7 @@ body {
 <script>
 
 // ========================================
-// 주파수 스캔 시 방송 혼합 효과 (수정)
+// 주파수 스캔 시 방송 혼합 효과 (iOS 지원 수정)
 // ========================================
 let scanAudios = [];
 let scanInterval = null;
@@ -259,6 +259,7 @@ let lastTunedFreq = null;
 let originalVolume = 1;
 let isDirectTuning = false;
 let isScanningActive = false;
+let audioContext = null;  // ✨ Web Audio API용 컨텍스트
 
 function startScan(currentFreq) {
   if (isDirectTuning || isChanging) {
@@ -286,24 +287,50 @@ function startScan(currentFreq) {
     Math.abs(ch.freq - currentFreq) <= 2
   );
   
-  nearbyStations.forEach(station => {
-    const distance = Math.abs(station.freq - currentFreq);
-    const volume = Math.max(0, 1 - (distance / 2));
+  // ✨ iOS 감지
+  const isIOSDevice = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  
+  if (isIOSDevice) {
+    // ✨ iOS에서는 노이즈만 강하게 + 가장 가까운 방송 하나만
+    const nearestStation = nearbyStations.reduce((a, b) => 
+      Math.abs(b.freq - currentFreq) < Math.abs(a.freq - currentFreq) ? b : a
+    , {freq: 0});
     
-    if (volume > 0.1) {
-      const tempAudio = new Audio(station.url);
-      tempAudio.volume = volume * 0.4;
+    const distanceToNearest = Math.abs(nearestStation.freq - currentFreq);
+    
+    // 가까운 방송 하나만 약하게 재생
+    if (distanceToNearest <= 1.5 && nearestStation.url) {
+      const tempAudio = new Audio(nearestStation.url);
+      const volume = Math.max(0, 1 - (distanceToNearest / 1.5));
+      tempAudio.volume = volume * 0.25;  // iOS는 볼륨 더 낮게
       tempAudio.play().catch(() => {});
       scanAudios.push(tempAudio);
     }
-  });
-  
-  const nearestStation = nearbyStations.reduce((a, b) => 
-    Math.abs(b.freq - currentFreq) < Math.abs(a.freq - currentFreq) ? b : a
-  , {freq: 0});
-  
-  const distanceToNearest = Math.abs(nearestStation.freq - currentFreq);
-  noiseGain.gain.value = Math.min(0.2, distanceToNearest * 0.08);
+    
+    // 노이즈를 더 강하게
+    noiseGain.gain.value = Math.min(0.3, distanceToNearest * 0.12);
+    
+  } else {
+    // ✨ PC에서는 기존 방식 (여러 방송 혼합)
+    nearbyStations.forEach(station => {
+      const distance = Math.abs(station.freq - currentFreq);
+      const volume = Math.max(0, 1 - (distance / 2));
+      
+      if (volume > 0.1) {
+        const tempAudio = new Audio(station.url);
+        tempAudio.volume = volume * 0.4;
+        tempAudio.play().catch(() => {});
+        scanAudios.push(tempAudio);
+      }
+    });
+    
+    const nearestStation = nearbyStations.reduce((a, b) => 
+      Math.abs(b.freq - currentFreq) < Math.abs(a.freq - currentFreq) ? b : a
+    , {freq: 0});
+    
+    const distanceToNearest = Math.abs(nearestStation.freq - currentFreq);
+    noiseGain.gain.value = Math.min(0.2, distanceToNearest * 0.08);
+  }
 }
 
 function stopScan() {
@@ -313,7 +340,7 @@ function stopScan() {
   });
   scanAudios = [];
   isScanningActive = false;
-  noiseGain.gain.value = 0;  // ✨ 노이즈 완전히 끄기
+  noiseGain.gain.value = 0;
 }
 
 
@@ -668,10 +695,14 @@ audio.addEventListener('error', () => {
 // 주파수 슬라이더 이벤트 (수정)
 // ========================================
 let inputDebounceTimer = null;
+let lastInputFreq = null;  // ✨ 마지막 입력 주파수 추적
 
 range.addEventListener('input', () => {
   ctx.resume();
-  updateNeedle(+range.value);
+  const currentFreq = +range.value;
+  lastInputFreq = currentFreq;  // ✨ 현재 주파수 저장
+  
+  updateNeedle(currentFreq);
   clearTimeout(inputTimer);
   clearTimeout(inputDebounceTimer);
   
@@ -681,45 +712,59 @@ range.addEventListener('input', () => {
     return;
   }
   
-  // 스캔 효과는 수동 슬라이더 조작 시에만
-  if (!isChanging && !isTouching && !isDirectTuning) {
-    stationText.textContent = '스캔중...';
-    startScan(+range.value);
+  const isIOSDevice = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  
+  if (!isChanging && !isDirectTuning) {
+    if (isIOSDevice || !isTouching) {
+      stationText.textContent = '스캔중...';
+      startScan(currentFreq);
+    }
   }
   
   if (!isChanging) {
     stereo.classList.remove('on');
   }
   
-  // 0.5초 동안 입력이 없으면 자동으로 튜닝
+  // ✨ 입력 후 0.5초 뒤 자동 튜닝
   inputDebounceTimer = setTimeout(() => {
     if (!isChanging && !isDirectTuning) {
-      console.log('자동 튜닝 실행:', +range.value);
-      stopScan();  // ✨ 튜닝 전 스캔 중지
-      range.dispatchEvent(new Event('change'));
+      console.log('자동 튜닝 실행:', currentFreq);
+      stopScan();
+      isChanging = true;  // ✨ 플래그 먼저 설정
+      snapTo(currentFreq).then(() => {
+        setTimeout(() => {
+          isChanging = false;
+        }, 100);
+      }).catch(err => {
+        console.error('자동 튜닝 오류:', err);
+        isChanging = false;
+      });
     }
   }, 500);
   
-  // ✨ 스캔 정리 타이밍을 디바운스와 맞춤
   inputTimer = setTimeout(() => {
     if (!isDirectTuning && !isChanging) {
       stopScan();
     }
-  }, 550);  // 디바운스보다 약간 늦게
+  }, 550);
 });
 
 range.addEventListener('change', () => {
-  console.log('change 이벤트 발생:', +range.value, 'isChanging:', isChanging);
+  const currentFreq = +range.value;
+  console.log('change 이벤트 발생:', currentFreq, 'isChanging:', isChanging);
   
   if (isChanging) {
     console.log('이미 처리 중이므로 무시');
     return;
   }
   
-  isChanging = true;
-  stopScan();  // ✨ change 시작 시 즉시 스캔 중지
+  // ✨ debounce 타이머 클리어
+  clearTimeout(inputDebounceTimer);
   
-  snapTo(+range.value).then(() => {
+  isChanging = true;
+  stopScan();
+  
+  snapTo(currentFreq).then(() => {
     setTimeout(() => {
       isChanging = false;
       console.log('튜닝 완료');
@@ -767,6 +812,10 @@ if (isIOS) {
     isTouching = true;
     lastTouchX = e.touches[0].clientX;
     clearTimeout(inputDebounceTimer);
+    
+    if (ctx.state === 'suspended') {
+      ctx.resume();
+    }
   });
   
   range.addEventListener('touchmove', e => {
@@ -775,23 +824,42 @@ if (isIOS) {
     const x = e.touches[0].clientX;
     const dx = x - lastTouchX;
     lastTouchX = x;
-    const sensitivity = 0.022;  // ✨ 더 민감하게
+    const sensitivity = 0.022;
     let v = parseFloat(range.value);
     v += dx * sensitivity;
     v = Math.max(MIN, Math.min(MAX, v));
     range.value = v.toFixed(1);
-    range.dispatchEvent(new Event('input'));
+    
+    const inputEvent = new Event('input', {bubbles: true});
+    range.dispatchEvent(inputEvent);
   }, {passive: false});
   
   range.addEventListener('touchend', () => {
+    console.log('터치 종료 - 현재 주파수:', +range.value);
     isTouching = false;
     lastTouchX = null;
     
+    // ✨ 터치 종료 시 즉시 튜닝 시작
     setTimeout(() => {
-      if (!isChanging) {
-        range.dispatchEvent(new Event('change'));
+      const currentFreq = +range.value;
+      console.log('터치 종료 후 튜닝 시도:', currentFreq, 'isChanging:', isChanging);
+      
+      if (!isChanging && !isDirectTuning) {
+        clearTimeout(inputDebounceTimer);  // 기존 타이머 취소
+        stopScan();
+        
+        isChanging = true;
+        snapTo(currentFreq).then(() => {
+          setTimeout(() => {
+            isChanging = false;
+            console.log('터치 종료 튜닝 완료');
+          }, 100);
+        }).catch(err => {
+          console.error('터치 종료 튜닝 오류:', err);
+          isChanging = false;
+        });
       }
-    }, 100);
+    }, 50);  // ✨ 짧은 딜레이 후 실행
   });
 }
 
@@ -884,6 +952,42 @@ document.addEventListener('touchend', function(e) {
   }
   lastTouchEnd = now;
 }, {passive: false});
+
+// ========================================
+// 데스크톱 마우스 이벤트도 추가
+// ========================================
+let isMouseDown = false;
+
+range.addEventListener('mousedown', () => {
+  isMouseDown = true;
+  clearTimeout(inputDebounceTimer);
+});
+
+range.addEventListener('mouseup', () => {
+  console.log('마우스 업 - 현재 주파수:', +range.value);
+  isMouseDown = false;
+  
+  setTimeout(() => {
+    const currentFreq = +range.value;
+    console.log('마우스 업 후 튜닝 시도:', currentFreq, 'isChanging:', isChanging);
+    
+    if (!isChanging && !isDirectTuning) {
+      clearTimeout(inputDebounceTimer);
+      stopScan();
+      
+      isChanging = true;
+      snapTo(currentFreq).then(() => {
+        setTimeout(() => {
+          isChanging = false;
+          console.log('마우스 업 튜닝 완료');
+        }, 100);
+      }).catch(err => {
+        console.error('마우스 업 튜닝 오류:', err);
+        isChanging = false;
+      });
+    }
+  }, 50);
+});
 
 // ========================================
 // 초기화
