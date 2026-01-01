@@ -630,20 +630,22 @@ function updateMediaSession(channel, programTitle) {
 }
 
 // ========================================
-// 채널 튜닝 (타임아웃 추가 버전)
+// 채널 튜닝 (수정)
 // ========================================
 async function snapTo(freq) {
-  console.log('>>> snapTo 시작:', freq);
+  console.log('snapTo 호출:', freq);
   
   isDirectTuning = true;
-  stopScan();
+  stopScan();  // ✨ 스캔 즉시 중지 (노이즈 포함)
+  
+  audio.volume = originalVolume;
   
   const flat = channels.flatMap(g => g.list);
   const nearest = flat.reduce((a, b) =>
     Math.abs(b.freq - freq) < Math.abs(a.freq - freq) ? b : a
   );
 
-  console.log('>>> 선택된 채널:', nearest.name, nearest.freq);
+  console.log('가장 가까운 채널:', nearest.name, nearest.freq);
 
   range.value = nearest.freq;
   updateNeedle(nearest.freq);
@@ -657,123 +659,58 @@ async function snapTo(freq) {
   }
   
   if (!power) {
-    console.log('>>> 전원 꺼짐');
     stereo.classList.remove('on');
     isDirectTuning = false;
-    noiseGain.gain.value = 0;
+    noiseGain.gain.value = 0;  // ✨ 노이즈 끄기
     return;
   }
 
+   // ✨ 튜닝 시작 시 노이즈 0으로 설정
   noiseGain.gain.value = 0;
+  
+  setTimeout(() => {
+    if (audio.src === nearest.url) {
+      stationText.textContent = nearest.name + ' 연결 중...';
+    }
+  }, 50);
 
-  // 같은 채널이고 재생 중이면 그대로 유지
   if (audio.src === nearest.url && !audio.paused) {
-    console.log('>>> 같은 채널 계속 재생');
+    console.log('같은 채널 계속 재생');
     stationText.textContent = nearest.name;
     lastTunedFreq = nearest.freq;
+    noiseGain.gain.value = 0;
     isDirectTuning = false;
     return;
   }
 
-  console.log('>>> 새 채널 재생:', nearest.url);
-  
-  // ✨ 타임아웃 설정 (10초)
-  let playTimeout = null;
-  let isPlaySuccessful = false;
-  
-  const timeoutPromise = new Promise((_, reject) => {
-    playTimeout = setTimeout(() => {
-      reject(new Error('연결 시간 초과'));
-    }, 10000); // 10초 타임아웃
-  });
+  console.log("재생", nearest.url);
+  audio.src = nearest.url;
+  // audio.volume = originalVolume;   // ★ 이 줄 제거 또는 주석 처리
 
   try {
-    audio.src = nearest.url;
     noiseGain.gain.value = 0.05;
-    setVolumeInstant(0);
-    
-    stationText.textContent = nearest.name + ' 연결 중...';
-    
-    // ✨ 재생 시도와 타임아웃을 동시에 진행
-    await Promise.race([
-      audio.play(),
-      timeoutPromise
-    ]);
-    
-    clearTimeout(playTimeout); // 성공 시 타임아웃 해제
-    isPlaySuccessful = true;
-    
-    console.log('>>> 재생 시작 성공');
-    fadeToVolume(originalVolume, 1200);
-    
-    // ✨ playing 이벤트를 기다림 (최대 3초)
-    await new Promise((resolve, reject) => {
-      const playingHandler = () => {
-        console.log('>>> playing 이벤트 발생');
-        audio.removeEventListener('playing', playingHandler);
-        audio.removeEventListener('error', errorHandler);
-        clearTimeout(playingTimeout);
-        resolve();
-      };
-      
-      const errorHandler = () => {
-        console.log('>>> error 이벤트 발생');
-        audio.removeEventListener('playing', playingHandler);
-        audio.removeEventListener('error', errorHandler);
-        clearTimeout(playingTimeout);
-        reject(new Error('재생 오류'));
-      };
-      
-      const playingTimeout = setTimeout(() => {
-        console.log('>>> playing 이벤트 타임아웃');
-        audio.removeEventListener('playing', playingHandler);
-        audio.removeEventListener('error', errorHandler);
-        resolve(); // 타임아웃이어도 계속 진행
-      }, 3000);
-      
-      audio.addEventListener('playing', playingHandler, { once: true });
-      audio.addEventListener('error', errorHandler, { once: true });
-    });
-    
-    stationText.textContent = nearest.name;
+    setVolumeInstant(0);                 // ★ 0에서 시작
+    await audio.play();
+    fadeToVolume(originalVolume, 1200);  // ★ 1.2초 동안 0.6까지 올리기
+
+    console.log('재생 중', stationText.textContent);
     lastTunedFreq = nearest.freq;
-    
     const currentTitle = nowProgram.textContent || nearest.name;
     updateMediaSession(nearest, currentTitle);
-    
-    console.log('>>> 재생 완료');
-    
+    stereo.classList.add('on');
   } catch (e) {
-    clearTimeout(playTimeout);
-    console.error('>>> 재생 실패:', e.message);
-    
-    stereo.classList.remove('on');
+    console.error("재생 오류", e);
+    stereo.classList.remove("on");
     noiseGain.gain.value = 0.05;
-    
-    // ✨ 에러 종류에 따라 다른 메시지
-    if (e.message === '연결 시간 초과') {
-      stationText.textContent = nearest.name + ' - 연결 시간 초과';
-    } else {
-      stationText.textContent = nearest.name + ' - 연결 실패';
-    }
-    
-    setVolumeInstant(originalVolume);
-    
-    // ✨ 3초 후 자동으로 원래 이름으로 복구
-    setTimeout(() => {
-      if (stationText.textContent.includes('연결')) {
-        stationText.textContent = nearest.name;
-      }
-    }, 3000);
-    
+    stationText.textContent = "재생 실패";
+    setVolumeInstant(originalVolume);    // 실패 시 0.6으로 복구
   } finally {
     setTimeout(() => {
       isDirectTuning = false;
-      console.log('>>> snapTo 종료');
     }, 200);
   }
-}
 
+}
 // ========================================
 // 오디오 이벤트 리스너 (수정)
 // ========================================
@@ -1112,4 +1049,3 @@ stationText.textContent = '전원 꺼짐';
 
 </body>
 </html>
-
