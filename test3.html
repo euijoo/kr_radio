@@ -721,8 +721,9 @@ audio.addEventListener('playing', () => {
 
 audio.addEventListener('waiting', () => {
   stereo.classList.remove('on');
-  if (power && !isScanningActive) {  // ✨ 스캔 중이 아닐 때만
-    noiseGain.gain.value = 0.05;  // 버퍼링 중 약간의 노이즈
+  if (power && !isScanningActive) {
+    noiseGain.gain.value = 0.05;
+    stationText.textContent = '버퍼링 중...';
   }
 });
 
@@ -736,7 +737,13 @@ audio.addEventListener('pause', () => {
 audio.addEventListener('error', () => {
   stereo.classList.remove('on');
   noiseGain.gain.value = 0.05;
-  stationText.textContent = '방송 오류';
+
+  // 2~3초 정도 지켜본 뒤 여전히 멈춰 있으면 오류 표시
+  setTimeout(() => {
+    if (audio.paused || audio.readyState < 3) {
+      stationText.textContent = '방송 오류 또는 일시 중단';
+    }
+  }, 2500);
 });
 
 // ========================================
