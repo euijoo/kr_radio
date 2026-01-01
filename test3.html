@@ -7,10 +7,10 @@
 <script src="https://cdn.tailwindcss.com"></script>
 
 <style>
- body {
- overflow: hidden;
- overscroll-behavior: none;
-   user-select: none;
+body {
+  overflow: hidden;
+  overscroll-behavior: none;
+  user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
   touch-action: pan-y;
@@ -21,66 +21,196 @@
   -webkit-user-select: none;
   -webkit-touch-callout: none;
 }
- 
-#dial{--dial-height:180px;height:var(--dial-height);position:relative}
-.scale{position:absolute;bottom:15px;left:0;right:0;height:80px;display:flex;justify-content:space-between;align-items:flex-end;padding:0 30px}
-.tick{display:flex;flex-direction:column;align-items:center;position:relative}
 
-/* 큰 눈금 (88, 92, 96, 100, 104, 108) */
-.tick.major .tick-mark{width:1.6px;height:24px;background:#00d9ff;margin-bottom:6px;box-shadow:0 0 4px #00d9ff}
-.tick.major .tick-label{font-size:11px;font-weight:500;color:#00d9ff;text-shadow:0 0 6px rgba(0,217,255,0.6)}
-/* 중간 눈금 (90, 94, 98, 102, 106) */
-.tick.medium .tick-mark{width:1.5px;height:27px;background:#00b8dd;margin-bottom:6px}
-
-/* 작은 눈금 (0.5MHz 단위) */
-.tick.minor .tick-mark{width:1px;height:20px;background:#008ba8;margin-bottom:6px;opacity:0.7}
-
-
-/* AM 눈금 (위쪽) */
-.am-scale{position:absolute;top:15px;left:0;right:0;height:50px;display:flex;justify-content:space-between;align-items:flex-start;padding:0 30px;opacity:0.5}
-.am-tick{display:flex;flex-direction:column;align-items:center}
-.am-tick-label{font-size:9px;color:#00d9ff;margin-bottom:4px;text-shadow:0 0 4px rgba(0,217,255,0.4)}
-.am-tick-mark{width:1px;height:10px;background:#00d9ff}
-.am-tick.major .am-tick-mark{height:14px;width:1.5px}
-
-/* 바늘 색상 변경 */
-#needle{
-  position:absolute;
-  top:-12px;  /* 원래대로 */
-  width:3px;
-  height:calc(var(--dial-height) + 24px);  /* 원래대로 */
-  background:linear-gradient(to bottom, #ff3333, #cc0000);
-  box-shadow:0 0 12px rgba(255,51,51,0.9);
-  z-index:10;
-  transition:left .18s ease-out;
+#dial {
+  --dial-height: 180px;
+  height: var(--dial-height);
+  position: relative;
 }
 
-#dialInfo{padding:10px 12px 0}
-#freqText{font-size:32px;font-weight:600}
-#stationText{font-size:13px;color:#9ca3af;margin-top:4px}
-#nowProgram{
-  font-size:12px;
-  color:#d1d5db;
-  margin-top:2px;
-  min-height:18px;
-  line-height:18px;
+.scale {
+  position: absolute;
+  bottom: 15px;
+  left: 0;
+  right: 0;
+  height: 80px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 0 30px;
 }
-#stereoLamp{margin-bottom:10px;}
-.stereo{width:8px;height:8px;border-radius:50%;background:#0f0;box-shadow:0 0 10px #0f0;opacity:0;transition:.3s}
-.stereo.on{opacity:1}
-.power-on{background:#154efa!important;box-shadow:0 0 12px #154efa}
-.tab{cursor:pointer;font-weight:600;color:#aaa;padding-bottom:4px}
-.tab.active{color:#fff;border-bottom:2px solid #facc15}
-#channelList{overflow:hidden;height:0;opacity:0;transform:translateY(-6px);transition:height .45s,opacity .3s,transform .45s}
-#channelList.open{opacity:1;transform:translateY(0)}
-.channel-item{opacity:0;transform:translateY(6px);transition:.35s}
-#channelList.open .channel-item{opacity:1;transform:translateY(0)}
 
-/* 🔥 iOS 터치 최적화 */
-#freqRange{
-  touch-action:none;
-  -webkit-user-select:none;
-  user-select:none;
+.tick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+.tick.major .tick-mark {
+  width: 1.6px;
+  height: 24px;
+  background: #00d9ff;
+  margin-bottom: 6px;
+  box-shadow: 0 0 4px #00d9ff;
+}
+
+.tick.major .tick-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: #00d9ff;
+  text-shadow: 0 0 6px rgba(0,217,255,0.6);
+}
+
+.tick.medium .tick-mark {
+  width: 1.5px;
+  height: 27px;
+  background: #00b8dd;
+  margin-bottom: 6px;
+}
+
+.tick.minor .tick-mark {
+  width: 1px;
+  height: 20px;
+  background: #008ba8;
+  margin-bottom: 6px;
+  opacity: 0.7;
+}
+
+.am-scale {
+  position: absolute;
+  top: 15px;
+  left: 0;
+  right: 0;
+  height: 50px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 0 30px;
+  opacity: 0.5;
+}
+
+.am-tick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.am-tick-label {
+  font-size: 9px;
+  color: #00d9ff;
+  margin-bottom: 4px;
+  text-shadow: 0 0 4px rgba(0,217,255,0.4);
+}
+
+.am-tick-mark {
+  width: 1px;
+  height: 10px;
+  background: #00d9ff;
+}
+
+.am-tick.major .am-tick-mark {
+  height: 14px;
+  width: 1.5px;
+}
+
+#needle {
+  position: absolute;
+  top: -12px;
+  width: 3px;
+  height: calc(var(--dial-height) + 24px);
+  background: linear-gradient(to bottom, #ff3333, #cc0000);
+  box-shadow: 0 0 12px rgba(255,51,51,0.9);
+  z-index: 10;
+  transition: left .18s ease-out;
+}
+
+#dialInfo {
+  padding: 10px 12px 0;
+}
+
+#freqText {
+  font-size: 32px;
+  font-weight: 600;
+}
+
+#stationText {
+  font-size: 13px;
+  color: #9ca3af;
+  margin-top: 4px;
+}
+
+#nowProgram {
+  font-size: 12px;
+  color: #d1d5db;
+  margin-top: 2px;
+  min-height: 18px;
+  line-height: 18px;
+}
+
+#stereoLamp {
+  margin-bottom: 10px;
+}
+
+.stereo {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #0f0;
+  box-shadow: 0 0 10px #0f0;
+  opacity: 0;
+  transition: .3s;
+}
+
+.stereo.on {
+  opacity: 1;
+}
+
+.power-on {
+  background: #154efa !important;
+  box-shadow: 0 0 12px #154efa;
+}
+
+.tab {
+  cursor: pointer;
+  font-weight: 600;
+  color: #aaa;
+  padding-bottom: 4px;
+}
+
+.tab.active {
+  color: #fff;
+  border-bottom: 2px solid #facc15;
+}
+
+#channelList {
+  overflow: hidden;
+  height: 0;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: height .45s, opacity .3s, transform .45s;
+}
+
+#channelList.open {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.channel-item {
+  opacity: 0;
+  transform: translateY(6px);
+  transition: .35s;
+}
+
+#channelList.open .channel-item {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+#freqRange {
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 </style>
 </head>
@@ -99,8 +229,7 @@
   <div id="dial" class="relative rounded-xl overflow-hidden bg-gradient-to-b from-neutral-800 to-neutral-900">
     <div id="scale" class="scale"></div>
     <div id="needle"></div>
-    <input id="freqRange" type="range" min="87.5" max="108" step="0.1"
-      class="absolute inset-0 opacity-0 z-20">
+    <input id="freqRange" type="range" min="87.5" max="108" step="0.1" class="absolute inset-0 opacity-0 z-20">
   </div>
 
   <div id="dialInfo">
@@ -117,125 +246,109 @@
 <div id="channelList" class="px-4 py-4"></div>
 
 <script>
-const MIN=87.5, MAX=108;
-const audio=new Audio();
-const ctx=new (window.AudioContext||window.webkitAudioContext)();
-const noiseGain=ctx.createGain(); noiseGain.gain.value=0;
+// ========================================
+// 상수 및 전역 변수
+// ========================================
+const MIN = 87.5, MAX = 108;
+const audio = new Audio();
+const ctx = new (window.AudioContext || window.webkitAudioContext)();
+const noiseGain = ctx.createGain();
+noiseGain.gain.value = 0;
 
-const nowProgram=document.getElementById("nowProgram");
+let power = false;
+let activeGroup = null;
+let currentSchedule = null;
+let inputTimer = null;
+let isChanging = false;
+let lastTouchX = null;
+let isTouching = false;
+let lastTouchEnd = 0;
 
-/* ===== 방송 스케줄 ===== */
-let currentSchedule=null;
+// DOM 요소
+const range = document.getElementById('freqRange');
+const needle = document.getElementById('needle');
+const freqText = document.getElementById('freqText');
+const stationText = document.getElementById('stationText');
+const nowProgram = document.getElementById('nowProgram');
+const stereo = document.getElementById('stereoLamp');
+const powerBtn = document.getElementById('powerBtn');
+const tabs = document.getElementById('tabs');
+const channelList = document.getElementById('channelList');
+const scale = document.getElementById('scale');
 
-async function loadSchedule(path){
-  try{
-    const r=await fetch(path);
-    currentSchedule=await r.json();
-    updateNowProgram();
-  }catch{
-    currentSchedule=null;
-    nowProgram.textContent='';
+// ========================================
+// 채널 데이터
+// ========================================
+const channels = [
+  {
+    group: 'SBS',
+    list: [
+      {name: 'SBS 파워FM', freq: 107.7, url: 'https://radio.bsod.kr/stream/?stn=sbs&ch=powerfm', json: 'schedule/sbs-powerfm.json'},
+      {name: 'SBS 러브FM', freq: 103.5, url: 'https://radio.bsod.kr/stream/?stn=sbs&ch=lovefm', json: 'schedule/sbs-lovefm.json'},
+      {name: 'SBS 고릴라디오M', freq: 95.1, url: 'https://radio.bsod.kr/stream/?stn=sbs&ch=dmb', json: 'schedule/sbs-gorillam.json'}
+    ]
+  },
+  {
+    group: 'MBC',
+    list: [
+      {name: 'MBC FM4U', freq: 91.9, url: 'https://radio.bsod.kr/stream/?stn=mbc&ch=fm4u', json: 'schedule/mbc-fm4u.json'},
+      {name: 'MBC 표준FM', freq: 95.9, url: 'https://radio.bsod.kr/stream/?stn=mbc&ch=sfm', json: 'schedule/mbc-standardfm.json'},
+      {name: 'MBC 올댓뮤직', freq: 100.7, url: 'https://radio.bsod.kr/stream/?stn=mbc&ch=chm', json: 'schedule/mbc-allthatmusic.json'}
+    ]
+  },
+  {
+    group: 'KBS',
+    list: [
+      {name: 'KBS 1라디오', freq: 97.3, url: 'https://radio.bsod.kr/stream/?stn=kbs&ch=1radio', json: 'schedule/kbs-1radio.json'},
+      {name: 'KBS 2라디오', freq: 106.1, url: 'https://radio.bsod.kr/stream/?stn=kbs&ch=2radio', json: 'schedule/kbs-happyfm.json'},
+      {name: 'KBS 3라디오', freq: 104.9, url: 'https://radio.bsod.kr/stream/?stn=kbs&ch=3radio', json: 'schedule/kbs-3radio.json'},
+      {name: 'KBS 1FM', freq: 93.1, url: 'https://radio.bsod.kr/stream/?stn=kbs&ch=1fm', json: 'schedule/kbs-classicfm.json'},
+      {name: 'KBS 2FM', freq: 89.1, url: 'https://radio.bsod.kr/stream/?stn=kbs&ch=2fm', json: 'schedule/kbs-coolfm.json'}
+    ]
+  },
+  {
+    group: 'ETC',
+    list: [
+      {name: 'EBS FM', freq: 104.5, url: 'https://radio.bsod.kr/stream/?stn=ebs'},
+      {name: 'TBS FM', freq: 95.1, url: 'https://radio.bsod.kr/stream/?stn=tbs&ch=fm'},
+      {name: 'TBS eFM', freq: 101.3, url: 'https://radio.bsod.kr/stream/?stn=tbs&ch=efm'},
+      {name: 'CBS 표준FM', freq: 98.1, url: 'https://radio.bsod.kr/stream/?stn=cbs&ch=sfm'},
+      {name: 'CBS 음악FM', freq: 93.9, url: 'https://radio.bsod.kr/stream/?stn=cbs&ch=mfm'},
+      {name: 'CBS JOY4U', freq: 90.1, url: 'https://radio.bsod.kr/stream/?stn=cbs&ch=joy4u'}
+    ]
   }
-}
+];
 
-function dayKey(){
-  const d=new Date().getDay();
-  return d===6?'saturday':d===0?'sunday':'weekday';
+// ========================================
+// 노이즈 생성
+// ========================================
+const buffer = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
+const data = buffer.getChannelData(0);
+for (let i = 0; i < data.length; i++) {
+  data[i] = (Math.random() * 2 - 1) * 0.5;
 }
-function toMin(t){
-  let [h,m]=t.split(":").map(Number);
-  if(h<5) h+=24;
-  return h*60+m;
-}
-function updateNowProgram(){
-  if(!currentSchedule) return;
-  const now=new Date();
-  let nowMin=now.getHours()*60+now.getMinutes();
-  if(now.getHours()<5) nowMin+=1440;
-  const list=currentSchedule.schedule[dayKey()]||currentSchedule.schedule.weekday;
-  for(let i=0;i<list.length;i++){
-    const cur=toMin(list[i].time||list[i].start);
-    const next=list[i+1]?toMin(list[i+1].time||list[i+1].start):9999;
-    if(nowMin>=cur&&nowMin<next){
-      nowProgram.textContent=list[i].title;
-      
-      // 재생 중이면 Media Session도 갱신
-      if(power && !audio.paused){
-        const flat=channels.flatMap(g=>g.list);
-        const currentChannel=flat.find(ch=>ch.url===audio.src);
-        if(currentChannel){
-          updateMediaSession(currentChannel, list[i].title);
-        }
-      }
-      return;
-    }
-  }
-  nowProgram.textContent='';
-}
-
-setInterval(updateNowProgram,60000);
-
-/* ===== 노이즈 ===== */
-const buffer=ctx.createBuffer(1,ctx.sampleRate*2,ctx.sampleRate);
-const data=buffer.getChannelData(0);
-for(let i=0;i<data.length;i++) data[i]=(Math.random()*2-1)*0.5;
-const noise=ctx.createBufferSource();
-noise.buffer=buffer; noise.loop=true;
+const noise = ctx.createBufferSource();
+noise.buffer = buffer;
+noise.loop = true;
 noise.connect(noiseGain).connect(ctx.destination);
 noise.start();
 
-/* ===== 채널 ===== */
-const channels=[
-{group:'SBS',list:[
-{name:'SBS 파워FM',freq:107.7,url:'https://radio.bsod.kr/stream/?stn=sbs&ch=powerfm',json:'schedule/sbs-powerfm.json'},
-{name:'SBS 러브FM',freq:103.5,url:'https://radio.bsod.kr/stream/?stn=sbs&ch=lovefm',json:'schedule/sbs-lovefm.json'},
-{name:'SBS 고릴라디오M',freq:95.1,url:'https://radio.bsod.kr/stream/?stn=sbs&ch=dmb',json:'schedule/sbs-gorillam.json'}
-]},
-{group:'MBC',list:[
-{name:'MBC FM4U',freq:91.9,url:'https://radio.bsod.kr/stream/?stn=mbc&ch=fm4u',json:'schedule/mbc-fm4u.json'},
-{name:'MBC 표준FM',freq:95.9,url:'https://radio.bsod.kr/stream/?stn=mbc&ch=sfm',json:'schedule/mbc-standardfm.json'},
-{name:'MBC 올댓뮤직',freq:100.7,url:'https://radio.bsod.kr/stream/?stn=mbc&ch=chm',json:'schedule/mbc-allthatmusic.json'}
-]},
-{group:'KBS',list:[
-{name:'KBS 1라디오',freq:97.3,url:'https://radio.bsod.kr/stream/?stn=kbs&ch=1radio',json:'schedule/kbs-1radio.json'},
-{name:'KBS 2라디오',freq:106.1,url:'https://radio.bsod.kr/stream/?stn=kbs&ch=2radio',json:'schedule/kbs-happyfm.json'},
-{name:'KBS 3라디오',freq:104.9,url:'https://radio.bsod.kr/stream/?stn=kbs&ch=3radio',json:'schedule/kbs-3radio.json'},
-{name:'KBS 1FM',freq:93.1,url:'https://radio.bsod.kr/stream/?stn=kbs&ch=1fm',json:'schedule/kbs-classicfm.json'},
-{name:'KBS 2FM',freq:89.1,url:'https://radio.bsod.kr/stream/?stn=kbs&ch=2fm',json:'schedule/kbs-coolfm.json'}
-]},
-{group:'ETC',list:[
-{name:'EBS FM',freq:104.5,url:'https://radio.bsod.kr/stream/?stn=ebs'},
-{name:'TBS FM',freq:95.1,url:'https://radio.bsod.kr/stream/?stn=tbs&ch=fm'},
-{name:'TBS eFM',freq:101.3,url:'https://radio.bsod.kr/stream/?stn=tbs&ch=efm'},
-{name:'CBS 표준FM',freq:98.1,url:'https://radio.bsod.kr/stream/?stn=cbs&ch=sfm'},
-{name:'CBS 음악FM',freq:93.9,url:'https://radio.bsod.kr/stream/?stn=cbs&ch=mfm'},
-{name:'CBS JOY4U',freq:90.1,url:'https://radio.bsod.kr/stream/?stn=cbs&ch=joy4u'}
-]}
-];
-
-/* ===== UI ===== */
-/* ===== FM 눈금 (주요 + 중간) ===== */
-const scale=document.getElementById('scale');
-
-// 88부터 108까지 0.5MHz 간격으로 눈금 생성
-for(let freq = 88; freq <= 108; freq += 0.5) {
+// ========================================
+// UI 생성: FM 눈금
+// ========================================
+for (let freq = 88; freq <= 108; freq += 0.5) {
   const tick = document.createElement('div');
   
-  // 4MHz 간격 (88, 92, 96, 100, 104, 108): 큰 눈금 + 숫자
   if (freq % 4 === 0) {
     tick.className = 'tick major';
     tick.innerHTML = `
       <div class="tick-mark"></div>
       <div class="tick-label">${Math.round(freq)}</div>
     `;
-  }
-  // 2MHz 간격 (90, 94, 98, 102, 106): 중간 눈금
-  else if (freq % 2 === 0) {
+  } else if (freq % 2 === 0) {
     tick.className = 'tick medium';
     tick.innerHTML = `<div class="tick-mark"></div>`;
-  }
-  // 나머지 0.5MHz 간격: 작은 눈금
-  else {
+  } else {
     tick.className = 'tick minor';
     tick.innerHTML = `<div class="tick-mark"></div>`;
   }
@@ -243,7 +356,9 @@ for(let freq = 88; freq <= 108; freq += 0.5) {
   scale.appendChild(tick);
 }
 
-/* ===== AM 눈금 (위쪽, 장식용) ===== */
+// ========================================
+// UI 생성: AM 눈금 (장식용)
+// ========================================
 const amScale = document.createElement('div');
 amScale.className = 'am-scale';
 [530, 630, 810, 1080, 1350, 1620].forEach(freq => {
@@ -257,38 +372,78 @@ amScale.className = 'am-scale';
 });
 document.getElementById('dial').insertBefore(amScale, scale);
 
+// ========================================
+// 방송 스케줄 관리
+// ========================================
+async function loadSchedule(path) {
+  try {
+    const r = await fetch(path);
+    currentSchedule = await r.json();
+    updateNowProgram();
+  } catch {
+    currentSchedule = null;
+    nowProgram.textContent = '';
+  }
+}
 
+function dayKey() {
+  const d = new Date().getDay();
+  return d === 6 ? 'saturday' : d === 0 ? 'sunday' : 'weekday';
+}
 
-let power=false,activeGroup=null;
-const range=document.getElementById('freqRange');
-const needle=document.getElementById('needle');
-const freqText=document.getElementById('freqText');
-const stationText=document.getElementById('stationText');
-const stereo=document.getElementById('stereoLamp');
-const powerBtn=document.getElementById('powerBtn');
-const tabs=document.getElementById('tabs');
-const channelList=document.getElementById('channelList');
+function toMin(t) {
+  let [h, m] = t.split(":").map(Number);
+  if (h < 5) h += 24;
+  return h * 60 + m;
+}
 
-function updateNeedle(f){
-  // 실제 생성된 눈금 위치를 기준으로 계산
+function updateNowProgram() {
+  if (!currentSchedule) return;
+  const now = new Date();
+  let nowMin = now.getHours() * 60 + now.getMinutes();
+  if (now.getHours() < 5) nowMin += 1440;
+  const list = currentSchedule.schedule[dayKey()] || currentSchedule.schedule.weekday;
+  
+  for (let i = 0; i < list.length; i++) {
+    const cur = toMin(list[i].time || list[i].start);
+    const next = list[i + 1] ? toMin(list[i + 1].time || list[i + 1].start) : 9999;
+    if (nowMin >= cur && nowMin < next) {
+      nowProgram.textContent = list[i].title;
+      
+      if (power && !audio.paused) {
+        const flat = channels.flatMap(g => g.list);
+        const currentChannel = flat.find(ch => ch.url === audio.src);
+        if (currentChannel) {
+          updateMediaSession(currentChannel, list[i].title);
+        }
+      }
+      return;
+    }
+  }
+  nowProgram.textContent = '';
+}
+
+setInterval(updateNowProgram, 60000);
+
+// ========================================
+// 바늘 위치 업데이트
+// ========================================
+function updateNeedle(f) {
   const majorFreqs = [88, 92, 96, 100, 104, 108];
   const ticks = document.querySelectorAll('.tick.major');
   
   if (ticks.length === 0) {
-    // 눈금이 아직 생성 안 됐으면 기본 계산
     needle.style.left = ((f - MIN) / (MAX - MIN) * dial.clientWidth) + 'px';
     freqText.textContent = f.toFixed(1) + ' MHz';
     return;
   }
   
-  // 현재 주파수가 어느 구간에 있는지 찾기
   let position;
   if (f <= majorFreqs[0]) {
     position = ticks[0].offsetLeft + (ticks[0].offsetWidth / 2);
   } else if (f >= majorFreqs[majorFreqs.length - 1]) {
     position = ticks[ticks.length - 1].offsetLeft + (ticks[ticks.length - 1].offsetWidth / 2);
   } else {
-    // 두 눈금 사이 보간
     for (let i = 0; i < majorFreqs.length - 1; i++) {
       if (f >= majorFreqs[i] && f <= majorFreqs[i + 1]) {
         const tick1 = ticks[i].offsetLeft + (ticks[i].offsetWidth / 2);
@@ -304,10 +459,11 @@ function updateNeedle(f){
   freqText.textContent = f.toFixed(1) + ' MHz';
 }
 
-
-/* ==== Media Session 메타데이터 업데이트 ==== */
-function updateMediaSession(channel, programTitle){
-  if(!('mediaSession' in navigator)) return;
+// ========================================
+// Media Session 업데이트
+// ========================================
+function updateMediaSession(channel, programTitle) {
+  if (!('mediaSession' in navigator)) return;
 
   const title = programTitle || channel.name;
   const artist = channel.group || 'FM Radio';
@@ -317,72 +473,69 @@ function updateMediaSession(channel, programTitle){
     artist: artist,
     album: 'FM Radio',
     artwork: [
-      { src: 'bg-radio.png', sizes: '512x512', type: 'image/png' }
+      {src: 'bg-radio.png', sizes: '512x512', type: 'image/png'}
     ]
   });
 }
 
-/* ===== 채널 튜닝 ===== */
-async function snapTo(freq){
-  const flat=channels.flatMap(g=>g.list);
-  const nearest=flat.reduce((a,b)=>
-    Math.abs(b.freq-freq)<Math.abs(a.freq-freq)?b:a
+// ========================================
+// 채널 튜닝
+// ========================================
+async function snapTo(freq) {
+  const flat = channels.flatMap(g => g.list);
+  const nearest = flat.reduce((a, b) =>
+    Math.abs(b.freq - freq) < Math.abs(a.freq - freq) ? b : a
   );
 
-  range.value=nearest.freq;
+  range.value = nearest.freq;
   updateNeedle(nearest.freq);
+  stationText.textContent = nearest.name;
   
-  // 전원 꺼져 있어도 채널 정보 표시
-  stationText.textContent=nearest.name;
-  
-  // 스케줄 로드 (전원 상관없이)
-  if(nearest.json) {
+  if (nearest.json) {
     await loadSchedule(nearest.json);
   } else {
-    currentSchedule=null;
-    nowProgram.textContent='';
+    currentSchedule = null;
+    nowProgram.textContent = '';
   }
   
-  // 전원이 꺼져있으면 재생하지 않음
-  if(!power) {
+  if (!power) {
     stereo.classList.remove('on');
     return;
   }
 
-  noiseGain.gain.value=0.05;
+  noiseGain.gain.value = 0.05;
   
   setTimeout(() => {
-    if(audio.src === nearest.url) {
+    if (audio.src === nearest.url) {
       stationText.textContent = nearest.name + ' 연결 중...';
     }
   }, 50);
 
-  audio.src=nearest.url;
-  audio.volume=1;
+  audio.src = nearest.url;
+  audio.volume = 1;
 
-  try{
+  try {
     await audio.play();
-    stationText.textContent=nearest.name;
+    stationText.textContent = nearest.name;
     
     const currentTitle = nowProgram.textContent || nearest.name;
     updateMediaSession(nearest, currentTitle);
-    
-   
-    
-  }catch(e){
+  } catch (e) {
     stereo.classList.remove('on');
-    noiseGain.gain.value=0.05;
-    stationText.textContent='연결 실패';
-    return;
+    noiseGain.gain.value = 0.05;
+    stationText.textContent = '연결 실패';
   }
 }
 
-/* === 방송이 실제로 시작되면 노이즈 + 스테레오 램프 === */
+// ========================================
+// 오디오 이벤트 리스너
+// ========================================
 audio.addEventListener('playing', () => {
   if (!power) return;
   noiseGain.gain.value = 0;
   stereo.classList.add('on');
 });
+
 audio.addEventListener('waiting', () => {
   stereo.classList.remove('on');
 });
@@ -393,46 +546,36 @@ audio.addEventListener('pause', () => {
 
 audio.addEventListener('error', () => {
   stereo.classList.remove('on');
+  noiseGain.gain.value = 0.05;
+  stationText.textContent = '방송 오류';
 });
 
-
-/* 스캔/슬라이더 조작 시 */
-let inputTimer = null;
-let isChanging = false;
-
-range.addEventListener('input',()=>{
+// ========================================
+// 주파수 슬라이더 이벤트
+// ========================================
+range.addEventListener('input', () => {
   ctx.resume();
   updateNeedle(+range.value);
-  
   clearTimeout(inputTimer);
   
-if(!power){
-  audio.pause();
-  noiseGain.gain.value=0;
-  stereo.classList.remove('on');
-  stationText.textContent='전원 꺼짐';
-  nowProgram.textContent='';
-  if ('mediaSession' in navigator) {
-    navigator.mediaSession.metadata = null;
-  }
-}
-
-  
-  noiseGain.gain.value=0.05;
-  
-  // iOS 터치 중이거나 change 실행 중이면 램프를 건드리지 않음
-  if(!isChanging && !isTouching){
-    stationText.textContent='스캔중...';
+  if (!power) {
+    noiseGain.gain.value = 0;
+    stereo.classList.remove('on');
+    return;
   }
   
-  // change가 아닌 경우에만 램프 끄기
-  if(!isChanging){
+  noiseGain.gain.value = 0.05;
+  
+  if (!isChanging && !isTouching) {
+    stationText.textContent = '스캔중...';
+  }
+  
+  if (!isChanging) {
     stereo.classList.remove('on');
   }
 });
 
-
-range.addEventListener('change',()=>{
+range.addEventListener('change', () => {
   isChanging = true;
   snapTo(+range.value).then(() => {
     setTimeout(() => {
@@ -441,115 +584,118 @@ range.addEventListener('change',()=>{
   });
 });
 
-powerBtn.onclick=()=>{
+// ========================================
+// 전원 버튼
+// ========================================
+powerBtn.onclick = () => {
   ctx.resume();
-  power=!power;
-  powerBtn.classList.toggle('power-on',power);
-  if(!power){
+  power = !power;
+  powerBtn.classList.toggle('power-on', power);
+  
+  if (!power) {
     audio.pause();
-    noiseGain.gain.value=0;
+    noiseGain.gain.value = 0;
     stereo.classList.remove('on');
-    stationText.textContent='전원 꺼짐';
-    nowProgram.textContent='';
+    stationText.textContent = '전원 꺼짐';
+    nowProgram.textContent = '';
     if ('mediaSession' in navigator) {
       navigator.mediaSession.metadata = null;
     }
-  }else{
-    stationText.textContent='예열중...';
-    noiseGain.gain.value=0.05;
-    setTimeout(()=>snapTo(+range.value),800);
+  } else {
+    stationText.textContent = '예열중...';
+    noiseGain.gain.value = 0.05;
+    setTimeout(() => snapTo(+range.value), 800);
   }
 };
 
-
-/* === 오디오 에러 처리 === */
-  
-audio.addEventListener('error', () => {
-  stereo.classList.remove('on');
-  noiseGain.gain.value = 0.05;
-  stationText.textContent = '방송 오류';  // 또는 '스트림 오류'
-});
-
-
-/* ===== iOS 터치 감도 보정 ===== */
-let lastTouchX=null;
-let isTouching=false;
-const isIOS=/iPhone|iPad|iPod/i.test(navigator.userAgent);
-if(isIOS){
-  range.addEventListener('touchstart',e=>{
-    isTouching=true;
-    lastTouchX=e.touches[0].clientX;
+// ========================================
+// iOS 터치 최적화
+// ========================================
+const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+if (isIOS) {
+  range.addEventListener('touchstart', e => {
+    isTouching = true;
+    lastTouchX = e.touches[0].clientX;
   });
-  range.addEventListener('touchmove',e=>{
+  
+  range.addEventListener('touchmove', e => {
     e.preventDefault();
-    if(lastTouchX===null) return;
-    const x=e.touches[0].clientX;
-    const dx=x-lastTouchX;
-    lastTouchX=x;
-    const sensitivity=0.015;
-    let v=parseFloat(range.value);
-    v+=dx*sensitivity;
-    v=Math.max(MIN,Math.min(MAX,v));
-    range.value=v.toFixed(1);
+    if (lastTouchX === null) return;
+    const x = e.touches[0].clientX;
+    const dx = x - lastTouchX;
+    lastTouchX = x;
+    const sensitivity = 0.015;
+    let v = parseFloat(range.value);
+    v += dx * sensitivity;
+    v = Math.max(MIN, Math.min(MAX, v));
+    range.value = v.toFixed(1);
     range.dispatchEvent(new Event('input'));
-  },{passive:false});
-  range.addEventListener('touchend',()=>{
-    isTouching=false;
-    lastTouchX=null;
-    // touchend 직후 change 이벤트 발생 전에 isChanging 플래그 설정
-    isChanging=true;
+  }, {passive: false});
+  
+  range.addEventListener('touchend', () => {
+    isTouching = false;
+    lastTouchX = null;
+    isChanging = true;
     range.dispatchEvent(new Event('change'));
   });
 }
 
-/* ===== 채널 리스트 ===== */
-function closeList(){
-  channelList.style.height=channelList.scrollHeight+'px';
-  requestAnimationFrame(()=>{
-    channelList.style.height='0px';
+// ========================================
+// 채널 리스트 UI
+// ========================================
+function closeList() {
+  channelList.style.height = channelList.scrollHeight + 'px';
+  requestAnimationFrame(() => {
+    channelList.style.height = '0px';
     channelList.classList.remove('open');
   });
 }
 
-channels.forEach(g=>{
-  const tab=document.createElement('div');
-  tab.className='tab';
-  tab.textContent=g.group;
-  tab.onclick=()=>{
-    if(activeGroup===g){
+channels.forEach(g => {
+  const tab = document.createElement('div');
+  tab.className = 'tab';
+  tab.textContent = g.group;
+  tab.onclick = () => {
+    if (activeGroup === g) {
       closeList();
-      activeGroup=null;
-      document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+      activeGroup = null;
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
       return;
     }
-    activeGroup=g;
-    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    activeGroup = g;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     tab.classList.add('active');
-    channelList.innerHTML='';
-    g.list.forEach(ch=>{
-      const d=document.createElement('div');
-      d.className="channel-item flex justify-between bg-neutral-800 rounded-lg p-3 mb-2 cursor-pointer";
-      d.innerHTML=`<span>${ch.name}</span><span class="text-xs text-gray-400">${ch.freq.toFixed(1)}</span>`;
-      d.onclick=()=>{
+    channelList.innerHTML = '';
+    g.list.forEach(ch => {
+      const d = document.createElement('div');
+      d.className = "channel-item flex justify-between bg-neutral-800 rounded-lg p-3 mb-2 cursor-pointer";
+      d.innerHTML = `<span>${ch.name}</span><span class="text-xs text-gray-400">${ch.freq.toFixed(1)}</span>`;
+      d.onclick = () => {
         snapTo(ch.freq);
         closeList();
-        activeGroup=null;
-        document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+        activeGroup = null;
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
       };
       channelList.appendChild(d);
     });
+    
+    // ✨ 수정된 부분: DOM 렌더링 후 높이 계산
     channelList.classList.add('open');
-    channelList.style.height=channelList.scrollHeight+'px';
+    channelList.style.height = '0px';  // 먼저 0으로 설정
+    
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {  // 이중 requestAnimationFrame으로 확실한 렌더링 보장
+        channelList.style.height = channelList.scrollHeight + 'px';
+      });
+    });
   };
   tabs.appendChild(tab);
 });
 
-range.value=91.9;
-updateNeedle(91.9);
-stationText.textContent='전원 꺼짐';
-
- // 현재 시간 표시 (초 포함)
-function updateTime(){
+// ========================================
+// 현재 시간 표시
+// ========================================
+function updateTime() {
   const now = new Date();
   const h = String(now.getHours()).padStart(2, '0');
   const m = String(now.getMinutes()).padStart(2, '0');
@@ -559,37 +705,37 @@ function updateTime(){
 updateTime();
 setInterval(updateTime, 1000);
 
-// 핀치 줌 완전 차단
+// ========================================
+// 핀치 줌 및 더블탭 줌 차단
+// ========================================
 document.addEventListener('touchstart', function(e) {
   if (e.touches.length > 1) {
     e.preventDefault();
   }
-}, { passive: false });
+}, {passive: false});
 
 document.addEventListener('touchmove', function(e) {
   if (e.touches.length > 1) {
     e.preventDefault();
   }
-}, { passive: false });
+}, {passive: false});
 
-document.addEventListener('touchend', function(e) {
-  if (e.touches.length > 1) {
-    e.preventDefault();
-  }
-}, { passive: false });
-
-// 더블탭 줌 차단
-let lastTouchEnd = 0;
 document.addEventListener('touchend', function(e) {
   const now = Date.now();
   if (now - lastTouchEnd <= 300) {
     e.preventDefault();
   }
   lastTouchEnd = now;
-}, { passive: false });
+}, {passive: false});
 
-
+// ========================================
+// 초기화
+// ========================================
+range.value = 91.9;
+updateNeedle(91.9);
+stationText.textContent = '전원 꺼짐';
 </script>
 
 </body>
 </html>
+
