@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>FM Radio</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/icecast-metadata-js"></script>
 
 <style>
  body {
@@ -368,31 +367,7 @@ async function snapTo(freq){
     const currentTitle = nowProgram.textContent || nearest.name;
     updateMediaSession(nearest, currentTitle);
     
-    // ✨ ICY 메타데이터 파싱 추가
-    if(typeof IcecastMetadataPlayer !== 'undefined') {
-      const metadataPlayer = new IcecastMetadataPlayer(nearest.url, {
-        onMetadata: (metadata) => {
-          if(metadata.StreamTitle) {
-            const [artist, title] = metadata.StreamTitle.split(' - ');
-            
-            navigator.mediaSession.metadata = new MediaMetadata({
-              title: title || nearest.name,
-              artist: artist || nearest.group,
-              album: nearest.name,
-              artwork: [{ src: 'bg-radio.png', sizes: '512x512', type: 'image/png' }]
-            });
-            
-            // UI에도 표시 (선택사항)
-            if(title && artist) {
-              nowProgram.textContent = `🎵 ${artist} - ${title}`;
-            }
-          }
-        },
-        onError: (error) => {
-          console.log('ICY metadata not available:', error);
-        }
-      });
-    }
+   
     
   }catch(e){
     stereo.classList.remove('on');
@@ -431,11 +406,17 @@ range.addEventListener('input',()=>{
   
   clearTimeout(inputTimer);
   
-  if(!power){
-    noiseGain.gain.value=0;
-    stereo.classList.remove('on');
-    return;
+if(!power){
+  audio.pause();
+  noiseGain.gain.value=0;
+  stereo.classList.remove('on');
+  stationText.textContent='전원 꺼짐';
+  nowProgram.textContent='';
+  if ('mediaSession' in navigator) {
+    navigator.mediaSession.metadata = null;
   }
+}
+
   
   noiseGain.gain.value=0.05;
   
