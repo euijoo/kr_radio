@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>FM Radio</title>
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/icecast-metadata-js"></script>
 
 <style>
  body {
@@ -345,12 +346,11 @@ async function snapTo(freq){
   
   // 전원이 꺼져있으면 재생하지 않음
   if(!power) {
-    stereo.classList.remove('on');  // 추가: 전원 꺼져있으면 램프도 끄기
+    stereo.classList.remove('on');
     return;
   }
 
   noiseGain.gain.value=0.05;
-  
   
   setTimeout(() => {
     if(audio.src === nearest.url) {
@@ -367,6 +367,33 @@ async function snapTo(freq){
     
     const currentTitle = nowProgram.textContent || nearest.name;
     updateMediaSession(nearest, currentTitle);
+    
+    // ✨ ICY 메타데이터 파싱 추가
+    if(typeof IcecastMetadataPlayer !== 'undefined') {
+      const metadataPlayer = new IcecastMetadataPlayer(nearest.url, {
+        onMetadata: (metadata) => {
+          if(metadata.StreamTitle) {
+            const [artist, title] = metadata.StreamTitle.split(' - ');
+            
+            navigator.mediaSession.metadata = new MediaMetadata({
+              title: title || nearest.name,
+              artist: artist || nearest.group,
+              album: nearest.name,
+              artwork: [{ src: 'bg-radio.png', sizes: '512x512', type: 'image/png' }]
+            });
+            
+            // UI에도 표시 (선택사항)
+            if(title && artist) {
+              nowProgram.textContent = `🎵 ${artist} - ${title}`;
+            }
+          }
+        },
+        onError: (error) => {
+          console.log('ICY metadata not available:', error);
+        }
+      });
+    }
+    
   }catch(e){
     stereo.classList.remove('on');
     noiseGain.gain.value=0.05;
@@ -374,10 +401,6 @@ async function snapTo(freq){
     return;
   }
 }
-
-
-
-
 
 /* === 방송이 실제로 시작되면 노이즈 + 스테레오 램프 === */
 audio.addEventListener('playing', () => {
