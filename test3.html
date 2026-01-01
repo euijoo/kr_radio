@@ -364,6 +364,57 @@ let lastTouchX = null;
 let isTouching = false;
 let lastTouchEnd = 0;
 
+  // --- 공용 볼륨/페이드 유틸 ---
+let fadeTimer = null;
+
+function clearFade() {
+  if (fadeTimer) {
+    clearInterval(fadeTimer);
+    fadeTimer = null;
+  }
+}
+
+function setVolumeInstant(volume) {
+  clearFade();
+  audio.volume = Math.max(0, Math.min(1, volume));
+}
+
+function fadeToVolume(targetVolume = originalVolume, duration = 800) {
+  clearFade();
+  targetVolume = Math.max(0, Math.min(1, targetVolume));
+
+  const startVolume = audio.volume;
+  const diff = targetVolume - startVolume;
+  if (diff === 0) return;
+
+  const steps = 20;
+  const stepTime = duration / steps;
+  let currentStep = 0;
+
+  fadeTimer = setInterval(() => {
+    currentStep++;
+    const ratio = currentStep / steps;
+    const v = startVolume + diff * ratio;
+    audio.volume = Math.max(0, Math.min(1, v));
+
+    if (currentStep >= steps || audio.paused) {
+      audio.volume = targetVolume;
+      clearFade();
+    }
+  }, stepTime);
+}
+
+function fadeIn(targetVolume = originalVolume, duration = 800) {
+  setVolumeInstant(0);
+  fadeToVolume(targetVolume, duration);
+}
+
+function fadeOut(duration = 500) {
+  fadeToVolume(0, duration);
+}
+// --- 공용 볼륨/페이드 유틸 끝 ---
+
+
 // DOM 요소
 const range = document.getElementById('freqRange');
 const needle = document.getElementById('needle');
@@ -632,34 +683,23 @@ async function snapTo(freq) {
     return;
   }
 
-  console.log('새 채널 재생 시작:', nearest.url);
-  audio.src = nearest.url;
-  audio.volume = originalVolume;
-
-  try {
-    // ✨ 재생 전에 노이즈를 약간 켜서 연결 중임을 표시
-    noiseGain.gain.value = 0.05;
-    
-    await audio.play();
-    console.log('재생 성공');
-    stationText.textContent = nearest.name;
-    lastTunedFreq = nearest.freq;
-    
-    const currentTitle = nowProgram.textContent || nearest.name;
-    updateMediaSession(nearest, currentTitle);
-    
-    // ✨ 재생 성공 후 노이즈 완전히 끄기는 'playing' 이벤트에서 처리
-  } catch (e) {
-    console.error('재생 오류:', e);
-    stereo.classList.remove('on');
-    noiseGain.gain.value = 0.05;  // 오류 시에만 노이즈 유지
-    stationText.textContent = '연결 실패';
-  } finally {
-    setTimeout(() => {
-      isDirectTuning = false;
-      console.log('isDirectTuning 해제');
-    }, 200);  // ✨ 타이밍 여유 추가
-  }
+  console.log("재생", nearest.url);
+audio.src = nearest.url;
+audio.volume = originalVolume;   // ← 지금은 여기서 바로 원볼륨
+try {
+  noiseGain.gain.value = 0.05;
+  await audio.play();
+  // ...
+} catch (e) {
+  console.error("재생 오류", e);
+  stereo.classList.remove("on");
+  noiseGain.gain.value = 0.05;
+  stationText.textContent = "재생 실패";
+} finally {
+  setTimeout(() => {
+    isDirectTuning = false;
+  }, 200);
+}
 }
 // ========================================
 // 오디오 이벤트 리스너 (수정)
