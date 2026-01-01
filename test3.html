@@ -665,7 +665,7 @@ async function snapTo(freq) {
     return;
   }
 
-  // ✨ 튜닝 시작 시 노이즈 0으로 설정
+   // ✨ 튜닝 시작 시 노이즈 0으로 설정
   noiseGain.gain.value = 0;
   
   setTimeout(() => {
@@ -678,28 +678,38 @@ async function snapTo(freq) {
     console.log('같은 채널 계속 재생');
     stationText.textContent = nearest.name;
     lastTunedFreq = nearest.freq;
-    noiseGain.gain.value = 0;  // ✨ 노이즈 확실히 끄기
+    noiseGain.gain.value = 0;
     isDirectTuning = false;
     return;
   }
 
   console.log("재생", nearest.url);
-audio.src = nearest.url;
-audio.volume = originalVolume;   // ← 지금은 여기서 바로 원볼륨
-try {
-  noiseGain.gain.value = 0.05;
-  await audio.play();
-  // ...
-} catch (e) {
-  console.error("재생 오류", e);
-  stereo.classList.remove("on");
-  noiseGain.gain.value = 0.05;
-  stationText.textContent = "재생 실패";
-} finally {
-  setTimeout(() => {
-    isDirectTuning = false;
-  }, 200);
-}
+  audio.src = nearest.url;
+  // audio.volume = originalVolume;   // ★ 이 줄 제거 또는 주석 처리
+
+  try {
+    noiseGain.gain.value = 0.05;
+    setVolumeInstant(0);                 // ★ 0에서 시작
+    await audio.play();
+    fadeToVolume(originalVolume, 1200);  // ★ 1.2초 동안 0.6까지 올리기
+
+    console.log('재생 중', stationText.textContent);
+    lastTunedFreq = nearest.freq;
+    const currentTitle = nowProgram.textContent || nearest.name;
+    updateMediaSession(nearest, currentTitle);
+    stereo.classList.add('on');
+  } catch (e) {
+    console.error("재생 오류", e);
+    stereo.classList.remove("on");
+    noiseGain.gain.value = 0.05;
+    stationText.textContent = "재생 실패";
+    setVolumeInstant(originalVolume);    // 실패 시 0.6으로 복구
+  } finally {
+    setTimeout(() => {
+      isDirectTuning = false;
+    }, 200);
+  }
+
 }
 // ========================================
 // 오디오 이벤트 리스너 (수정)
