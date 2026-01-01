@@ -260,7 +260,9 @@ let originalVolume = 0.6;
 let isDirectTuning = false;
 let isScanningActive = false;
 let audioContext = null;  // ✨ Web Audio API용 컨텍스트
-
+let tuneToken = 0;          // 튜닝 요청 고유 토큰
+let currentChannel = null; // 현재 채널 캐시
+  
 function startScan(currentFreq) {
   if (isDirectTuning || isChanging) {
     return;
@@ -633,113 +635,102 @@ function updateMediaSession(channel, programTitle) {
 // 채널 튜닝 (수정)
 // ========================================
 async function snapTo(freq) {
-  console.log('snapTo 호출:', freq);
-  
+  const myToken = ++tuneToken;
   isDirectTuning = true;
-  stopScan();  // ✨ 스캔 즉시 중지 (노이즈 포함)
-  
-  audio.volume = originalVolume;
-  
+  stopScan();
+
   const flat = channels.flatMap(g => g.list);
   const nearest = flat.reduce((a, b) =>
     Math.abs(b.freq - freq) < Math.abs(a.freq - freq) ? b : a
   );
 
-  console.log('가장 가까운 채널:', nearest.name, nearest.freq);
+  currentChannel = nearest;
 
+  // UI: 주파수/바늘은 즉시 반영
   range.value = nearest.freq;
   updateNeedle(nearest.freq);
-  stationText.textContent = nearest.name;
-  
-  if (nearest.json) {
-    await loadSchedule(nearest.json);
-  } else {
-    currentSchedule = null;
-    nowProgram.textContent = '';
-  }
-  
+  freqText.textContent = nearest.freq.toFixed(1) + ' MHz';
+
+  // 전원 OFF면 여기서 종료
   if (!power) {
-    stereo.classList.remove('on');
-    isDirectTuning = false;
-    noiseGain.gain.value = 0;  // ✨ 노이즈 끄기
-    return;
-  }
-
-   // ✨ 튜닝 시작 시 노이즈 0으로 설정
-  noiseGain.gain.value = 0;
-  
-  setTimeout(() => {
-    if (audio.src === nearest.url) {
-      stationText.textContent = nearest.name + ' 연결 중...';
-    }
-  }, 50);
-
-  if (audio.src === nearest.url && !audio.paused) {
-    console.log('같은 채널 계속 재생');
     stationText.textContent = nearest.name;
-    lastTunedFreq = nearest.freq;
+    stereo.classList.remove('on');
     noiseGain.gain.value = 0;
     isDirectTuning = false;
     return;
   }
 
-  console.log("재생", nearest.url);
-  audio.src = nearest.url;
-  // audio.volume = originalVolume;   // ★ 이 줄 제거 또는 주석 처리
-
-  try {
-    noiseGain.gain.value = 0.05;
-    setVolumeInstant(0);                 // ★ 0에서 시작
-    await audio.play();
-    fadeToVolume(originalVolume, 1200);  // ★ 1.2초 동안 0.6까지 올리기
-
-    console.log('재생 중', stationText.textContent);
-    lastTunedFreq = nearest.freq;
-    const currentTitle = nowProgram.textContent || nearest.name;
-    updateMediaSession(nearest, currentTitle);
-    stereo.classList.add('on');
-  } catch (e) {
-    console.error("재생 오류", e);
-    stereo.classList.remove("on");
-    noiseGain.gain.value = 0.05;
-    stationText.textContent = "재생 실패";
-    setVolumeInstant(originalVolume);    // 실패 시 0.6으로 복구
-  } finally {
-    setTimeout(() => {
-      isDirectTuning = false;
-    }, 200);
+  // 스케줄 로드 (UI와 분리)
+  if (nearest.json) {
+    loadSchedule(nearest.json);
+  } else {
+    currentSchedule = null;
+    nowProgram.textContent = '';
   }
 
+  // 이미 같은 방송 재생 중이면 재시작하지 않음
+  if (audio.src === nearest.url && !audio.paused) {
+    isDirectTuning = false;
+    return;
+  }
+
+  try {
+    audio.pause();
+    audio.src = nearest.url;
+    audio.load();
+
+    setVolumeInstant(0);
+    noiseGain.gain.value = 0.05;
+
+    await audio.play();
+    if (myToken !== tuneToken) return; // ⭐ 중간 취소
+
+    fadeToVolume(originalVolume, 1200);
+
+    lastTunedFreq = nearest.freq;
+    updateMediaSession(nearest, nowProgram.textContent || nearest.name);
+  } catch (err) {
+    if (myToken !== tuneToken) return;
+    console.error('재생 실패:', err);
+    stationText.textContent = '재생 실패';
+    stereo.classList.remove('on');
+    noiseGain.gain.value = 0.05;
+  } finally {
+    setTimeout(() => {
+      if (myToken === tuneToken) {
+        isDirectTuning = false;
+      }
+    }, 150);
+  }
 }
+
 // ========================================
 // 오디오 이벤트 리스너 (수정)
 // ========================================
-audio.addEventListener('playing', () => {
-  if (!power) return;
-  noiseGain.gain.value = 0;  // ✨ 재생 시작되면 노이즈 완전히 끄기
-  stereo.classList.add('on');
-  console.log('방송 재생 시작 - 노이즈 OFF');
+audio.addEventListener('waiting', () => {
+  if (!power || !currentChannel) return;
+  stationText.textContent = currentChannel.name + ' 연결 중...';
+  stereo.classList.remove('on');
+  noiseGain.gain.value = 0.05;
 });
 
-audio.addEventListener('waiting', () => {
-  stereo.classList.remove('on');
-  if (power && !isScanningActive) {  // ✨ 스캔 중이 아닐 때만
-    noiseGain.gain.value = 0.05;  // 버퍼링 중 약간의 노이즈
-  }
+audio.addEventListener('playing', () => {
+  if (!power || !currentChannel) return;
+  stationText.textContent = currentChannel.name; // ⭐ 여기서 확정
+  stereo.classList.add('on');
+  noiseGain.gain.value = 0;
 });
 
 audio.addEventListener('pause', () => {
   stereo.classList.remove('on');
-  if (power && !isScanningActive) {  // ✨ 스캔 중이 아닐 때만
-    noiseGain.gain.value = 0.05;
-  }
 });
 
 audio.addEventListener('error', () => {
+  stationText.textContent = '방송 오류';
   stereo.classList.remove('on');
   noiseGain.gain.value = 0.05;
-  stationText.textContent = '방송 오류';
 });
+
 
 // ========================================
 // 주파수 슬라이더 이벤트 (수정)
