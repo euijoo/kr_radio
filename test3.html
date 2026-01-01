@@ -675,14 +675,15 @@ async function snapTo(freq) {
   }
 
   try {
-    audio.pause();
-    audio.src = nearest.url;
-    audio.load();
+  audio.pause();
+audio.src = nearest.url;
+audio.load();
 
-    setVolumeInstant(0);
-    noiseGain.gain.value = 0.05;
+setVolumeInstant(0);
+noiseGain.gain.value = 0.05;
 
-    await audio.play();
+await waitForCanPlay(audio);   // ⭐ 핵심
+await audio.play();
     if (myToken !== tuneToken) return; // ⭐ 중간 취소
 
     fadeToVolume(originalVolume, 1200);
