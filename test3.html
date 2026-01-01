@@ -122,8 +122,9 @@ body {
   background: linear-gradient(to bottom, #ff3333, #cc0000);
   box-shadow: 0 0 12px rgba(255,51,51,0.9);
   z-index: 10;
-  transition: left .12s cubic-bezier(0.25, 0.46, 0.45, 0.94);  /* ✨ 부드럽고 빠른 곡선 */
+  transition: left .06s ease-out;  /* ✨ 매우 빠른 반응 */
 }
+
 
 
 
@@ -765,7 +766,7 @@ if (isIOS) {
   range.addEventListener('touchstart', e => {
     isTouching = true;
     lastTouchX = e.touches[0].clientX;
-    clearTimeout(inputDebounceTimer);  // ✨ 터치 시작 시 타이머 클리어
+    clearTimeout(inputDebounceTimer);
   });
   
   range.addEventListener('touchmove', e => {
@@ -774,7 +775,7 @@ if (isIOS) {
     const x = e.touches[0].clientX;
     const dx = x - lastTouchX;
     lastTouchX = x;
-    const sensitivity = 0.015;
+    const sensitivity = 0.022;  // ✨ 더 민감하게
     let v = parseFloat(range.value);
     v += dx * sensitivity;
     v = Math.max(MIN, Math.min(MAX, v));
@@ -786,15 +787,14 @@ if (isIOS) {
     isTouching = false;
     lastTouchX = null;
     
-    // ✨ touchend에서 명시적으로 change 이벤트 발생
     setTimeout(() => {
       if (!isChanging) {
-        console.log('터치 종료 - change 이벤트 발생');
         range.dispatchEvent(new Event('change'));
       }
     }, 100);
   });
 }
+
 // ========================================
 // 채널 리스트 UI (수정)
 // ========================================
