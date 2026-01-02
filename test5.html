@@ -1149,7 +1149,7 @@ if (isIOS) {
     const x = e.touches[0].clientX;
     const dx = x - lastTouchX;
     lastTouchX = x;
-    const sensitivity = 0.003;
+    const sensitivity = 0.03;
     let v = parseFloat(range.value);
     v += dx * sensitivity;
     v = Math.max(MIN, Math.min(MAX, v));
