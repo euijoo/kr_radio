@@ -1036,11 +1036,17 @@ range.addEventListener('input', () => {
 
   const isIOSDevice = /iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-  // iOS에서 손가락 올려놓고 있는 동안엔 바늘만 업데이트
+  // ✅ iOS + 터치 중일 때:
+  //    - 바늘 업데이트는 이미 했으니
+  //    - 가볍게 scan만 돌리고 자동 튜닝/디바운스만 막는다
   if (isIOSDevice && isTouching) {
-    return;
+    if (!isChanging && !isDirectTuning) {
+      startScan(currentFreq);   // 스캔 노이즈/혼합은 돌리기
+    }
+    return;  // 자동 튜닝/타이머는 건너뜀
   }
 
+  // ⬇️ 아래는 기존 로직 유지
   if (!isChanging && !isDirectTuning) {
     if (isIOSDevice || !isTouching) {
       stationText.textContent = '스캔중...';
@@ -1072,6 +1078,7 @@ range.addEventListener('input', () => {
     }
   }, 550);
 });
+
 
 range.addEventListener('change', () => {
   const currentFreq = +range.value;
