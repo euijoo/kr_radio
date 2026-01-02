@@ -262,65 +262,12 @@ body {
   user-select: none;
 }
 
-/* 🔊 볼륨 슬라이더 기본 (핸들만 보이게) */
-#volumeSlider {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 100%;
-  height: 4px;
-  background: transparent;      /* 바 숨김 */
-  border-radius: 999px;
-  border: none;
-  outline: none;
-}
-
-/* 기본 트랙: 높이 0 → 거의 안 보임 */
-#volumeSlider::-webkit-slider-runnable-track {
-  height: 0px;
-  background: transparent;
-  border-radius: 999px;
-  border: none;
-  transition: height 0.2s ease-out, background 0.2s ease-out;
-}
-
-/* active 클래스가 붙었을 때만 바 보이기 */
-#volumeSlider.active::-webkit-slider-runnable-track {
-  height: 4px;
-  background: #ffffff;          /* 흰색 바 */
-}
-
-/* 핸들(동그라미) - WebKit */
-#volumeSlider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 8px;                  /* 동그라미 크기 */
-  height: 8px;
-  border-radius: 50%;
-   background: rgba(255,255,255,0.6);  /* 투명도 0.6 */         /* 핸들 색 */
-  border: none;
-  margin-top: -3px;
-  box-shadow: 0 0 4px rgba(255,255,255,0.6);
-}
-
-/* Firefox용 트랙/핸들 */
-#volumeSlider::-moz-range-track {
-  height: 0px;
-  background: transparent;
-  border-radius: 999px;
-  border: none;
-  transition: height 0.2s ease-out, background 0.2s ease-out;
-}
-#volumeSlider.active::-moz-range-track {
-  height: 4px;
-  background: #ffffff;
-}
-#volumeSlider::-moz-range-thumb {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #ffffff;
-  border: none;
-  box-shadow: 0 0 4px rgba(255,255,255,0.6);
+/* 뮤트 버튼 전환 애니메이션 */
+#muteBtn {
+  transition:
+    box-shadow 0.2s ease,
+    border-color 0.2s ease,
+    background-color 0.2s ease;
 }
 </style>
 </head>
@@ -342,37 +289,33 @@ body {
     <input id="freqRange" type="range" min="87.5" max="108" step="0.1" class="absolute inset-0 opacity-0 z-20">
   </div>
 
-  <div id="dialInfo">
-    <div class="flex items-center justify-between">
-      <div id="freqText"></div>
+<div id="dialInfo">
+  <!-- 첫 줄: 주파수 + (stereo 텍스트 + 램프) -->
+  <div class="flex items-center justify-between">
+    <!-- 왼쪽: 주파수 텍스트 -->
+    <div id="freqText"></div>
+
+    <!-- 오른쪽: stereo 텍스트 왼쪽, 램프 오른쪽 -->
+    <div class="flex items-center gap-1">
       <div id="stereoLamp" class="stereo"></div>
     </div>
-
-    <!-- 스테레오 램프 바로 아래: 볼륨 슬라이더 -->
-<div class="flex justify-end mt-1">
-  <div class="w-24 flex flex-col items-end gap-0.5">
-    <!-- 볼륨 핸들 바로 위 VOL 텍스트 -->
-    <span class="text-[9px] text-gray-400 tracking-[0.08em] pr-[2px]">
-      VOL
-    </span>
-
-    <!-- 실제 슬라이더 -->
-    <input
-      id="volumeSlider"
-      type="range"
-      min="0"
-      max="100"
-      value="100"
-      class="w-full"
-    >
   </div>
+
+  <!-- 둘째 줄: 오른쪽 끝에 (mute 텍스트 + 버튼), 위아래 간격 좁게 -->
+<div class="flex justify-end mt-6”>
+    <div class="flex items-center gap-1">
+ <button
+  id="muteBtn"
+  class="w-2 h-2 rounded-full bg-yellow-400/40"
+></button>
+    </div>
+  </div>
+
+  <div id="stationText" class="mt-1”></div>
+  <div id="nowProgram"></div>
 </div>
 
 
-    <div id="stationText"></div>
-    <div id="nowProgram"></div>
-  </div>
-</div>
 
 <div id="tabs" class="flex justify-around px-6 mt-6"></div>
 <div id="channelList" class="px-4 py-4"></div>
@@ -480,10 +423,11 @@ let lastTouchX = null;
 let isTouching = false;
 let lastTouchEnd = 0;
 
-// 볼륨 상태
+// 볼륨/뮤트 상태
 let fadeTimer = null;
-let currentVolume = 1; // 0~1
-let savedVolume = 100; // 0~100, 마지막 볼륨 위치
+let currentVolume = 1;   // 0~1 (상대 볼륨)
+let lastVolumeBeforeMute = 1;
+let isMuted = false;
 
 function clearFade() {
   if (fadeTimer) {
@@ -538,47 +482,51 @@ const powerBtn = document.getElementById('powerBtn');
 const tabs = document.getElementById('tabs');
 const channelList = document.getElementById('channelList');
 const scale = document.getElementById('scale');
-const volumeSlider = document.getElementById('volumeSlider');
+const muteBtn = document.getElementById('muteBtn');
 
 // ========================================
-// 볼륨 슬라이더
+// MUTE 버튼 (원형 핸들 버튼)
 // ========================================
-volumeSlider.addEventListener('input', () => {
-  const v = volumeSlider.value;      // 0~100
-  currentVolume = v / 100;           // 0~1
-  savedVolume = v;                   // 마지막 위치 기억
-  audio.volume = currentVolume * originalVolume;
-});
+function updateMuteUI() {
+  if (isMuted) {
+    // 뮤트 ON: 붉은색 작은 불 + 번짐
+    muteBtn.classList.add(
+      'bg-red-500',
+      'shadow',
+      'shadow-red-500/80'
+    );
+    muteBtn.classList.remove(
+      'bg-yellow-400/40'
+    );
+  } else {
+    // 뮤트 OFF: 노란 불, 번짐 없음
+    muteBtn.classList.remove(
+      'bg-red-500',
+      'shadow',
+      'shadow-red-500/80'
+    );
+    muteBtn.classList.add(
+      'bg-yellow-400/40'
+    );
+  }
+}
+muteBtn.addEventListener('click', () => {
+  if (!power) return;
+  if (!audio.src) return;
 
-// ========================================
-// 볼륨 슬라이더 표시/숨김 + 핸들 점프
-// ========================================
-
-// 마우스
-volumeSlider.addEventListener('mousedown', () => {
-  // 다시 만질 때, 저장된 위치로 핸들 되돌리기
-  volumeSlider.value = savedVolume;
-  volumeSlider.dispatchEvent(new Event('input')); // 볼륨 동기화
-  volumeSlider.classList.add('active');
-});
-
-document.addEventListener('mouseup', () => {
-  if (!volumeSlider.classList.contains('active')) return;
-  volumeSlider.classList.remove('active');
-  // 조절이 끝난 후, 핸들을 오른쪽 끝으로 숨기기
-  volumeSlider.value = 100;
-});
-
-// 터치
-volumeSlider.addEventListener('touchstart', () => {
-  volumeSlider.value = savedVolume;
-  volumeSlider.dispatchEvent(new Event('input'));
-  volumeSlider.classList.add('active');
-}, { passive: true });
-
-volumeSlider.addEventListener('touchend', () => {
-  volumeSlider.classList.remove('active');
-  volumeSlider.value = 100;
+  if (isMuted) {
+    // 언뮤트
+    isMuted = false;
+    audio.muted = false;
+    if (lastVolumeBeforeMute <= 0) lastVolumeBeforeMute = 1;
+    audio.volume = currentVolume * originalVolume * lastVolumeBeforeMute;
+  } else {
+    // 뮤트
+    isMuted = true;
+    lastVolumeBeforeMute = audio.volume > 0 ? audio.volume / (originalVolume || 1) : currentVolume;
+    audio.muted = true;
+  }
+  updateMuteUI();
 });
 
 // ========================================
@@ -1150,6 +1098,9 @@ powerBtn.onclick = () => {
     stationText.textContent = '전원 꺼짐';
     nowProgram.textContent = '';
     lastTunedFreq = null;
+    isMuted = false;
+    audio.muted = false;
+    updateMuteUI();
     if ('mediaSession' in navigator) {
       navigator.mediaSession.metadata = null;
     }
@@ -1389,9 +1340,10 @@ range.addEventListener('mouseup', () => {
 range.value = 91.9;
 updateNeedle(91.9);
 stationText.textContent = '전원 꺼짐';
-volumeSlider.value = 100;
-currentVolume = 1;
 audio.volume = currentVolume * originalVolume;
+isMuted = false;
+audio.muted = false;
+updateMuteUI();
 </script>
 
 </body>
