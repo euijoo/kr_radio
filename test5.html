@@ -378,10 +378,91 @@ body {
   }
 }
 
+@media (orientation: landscape) {
+  body {
+    max-width: none;
+    width: 100vw;
+    height: 100vh;
+  }
+
+  #layoutRoot {
+    display: flex;
+    flex-direction: row; /* 왼쪽 header, 오른쪽 튜너 */
+    height: 100%;
+  }
+
+  header {
+    width: 32%;
+    max-width: 280px;
+    border-right: 1px solid rgba(255,255,255,0.08);
+    padding: 16px 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  #powerBtn {
+    align-self: flex-end;
+    margin-top: 8px;
+  }
+
+  #topArea {
+    flex: 1;
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  #dial {
+    --dial-height: 150px;
+    height: var(--dial-height);
+    margin-bottom: 8px;
+  }
+
+  #tabs {
+    position: fixed;
+    bottom: 10px;
+    left: 16px;
+    right: 16px;
+    margin-top: 0;
+  }
+
+  #channelList {
+    position: fixed;
+    left: 16px;
+    right: 16px;
+    bottom: 60px;
+    max-height: 220px;
+    overflow-y: auto;
+  }
+}
 
   
 </style>
 </head>
+<body class="bg-neutral-900 text-white max-w-md mx-auto">
+
+  <div id="layoutRoot">
+    <header class="flex justify-between items-center px-4 py-3 text-lg font-semibold">
+      <!-- 기존 header 내용 -->
+    </header>
+
+    <div id="topArea" class="px-4">
+      <div id="dial" class="relative rounded-xl overflow-hidden bg-gradient-to-b from-neutral-800 to-neutral-900">
+        <!-- 기존 dial 내용 -->
+      </div>
+
+      <div id="dialInfo">
+        <!-- 기존 freqText / stationText / nowProgram -->
+      </div>
+    </div>
+  </div>
+
+  <!-- tabs / channelList는 그대로 아래에 두기 -->
+  <div id="tabs" class="flex justify-around px-6 mt-6"></div>
+  <div id="channelList" class="px-4 py-4"></div>
+</body>
 
 <body class="bg-neutral-900 text-white max-w-md mx-auto">
 
