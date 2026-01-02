@@ -311,7 +311,7 @@ body {
     </div>
   </div>
 
-  <div id="stationText" class="mt-1”></div>
+  <div id="stationText" class="mt-1 text-left"></div>
   <div id="nowProgram"></div>
 </div>
 
@@ -657,17 +657,27 @@ function updateNowProgram() {
   for (let i = 0; i < list.length; i++) {
     const cur = toMin(list[i].time || list[i].start);
     const next = list[i + 1] ? toMin(list[i + 1].time || list[i + 1].start) : 9999;
-    if (nowMin >= cur && nowMin < next) {
-      nowProgram.textContent = list[i].title;
-      if (power && !audio.paused) {
-        const flat = channels.flatMap(g => g.list);
-        const currentChannel = flat.find(ch => ch.url === audio.src);
-        if (currentChannel) {
-          updateMediaSession(currentChannel, list[i].title);
-        }
+  if (nowMin >= cur && nowMin < next) {
+  const title = list[i].title || list[i].name || '';
+  nowProgram.textContent = title;
+
+  if (power && !audio.paused) {
+    const flat = channels.flatMap(g => g.list);
+    const currentChannel = flat.find(ch => ch.url === audio.src);
+    if (currentChannel) {
+      // Media Session 메타데이터
+      updateMediaSession(currentChannel, title);
+
+      // 화면에도 채널명 + 제목 반영
+      if (title) {
+        stationText.textContent = currentChannel.name + ' - ' + title;
+      } else {
+        stationText.textContent = currentChannel.name;
       }
-      return;
     }
+  }
+  return;
+}
   }
   nowProgram.textContent = '';
 }
@@ -927,9 +937,15 @@ audio.addEventListener('playing', () => {
   console.log('▶️ 방송 재생 중');
   const flat = channels.flatMap(g => g.list);
   const currentChannel = flat.find(ch => ch.url === audio.src);
+
   if (currentChannel) {
-    stationText.textContent = currentChannel.name;
-    console.log('현재 방송:', currentChannel.name);
+    // 채널명 + 현재 방송 제목을 함께 표시
+    if (nowProgram.textContent && nowProgram.textContent.trim() !== '') {
+      stationText.textContent = currentChannel.name + ' - ' + nowProgram.textContent;
+    } else {
+      stationText.textContent = currentChannel.name;
+    }
+    console.log('현재 방송:', stationText.textContent);
   }
 });
 
