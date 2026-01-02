@@ -183,7 +183,8 @@ body {
   background: linear-gradient(to bottom, #ff3333, #cc0000);
   box-shadow: 0 0 12px rgba(255,51,51,0.9);
   z-index: 10;
-  transition: left .06s ease-out;
+  /* transition 제거해서 손가락에 더 붙게 */
+  /* transition: left .06s ease-out; */
 }
 
 #dialInfo {
@@ -289,38 +290,34 @@ body {
     <input id="freqRange" type="range" min="87.5" max="108" step="0.1" class="absolute inset-0 opacity-0 z-20">
   </div>
 
-<div id="dialInfo">
-  <div class="flex items-start justify-between">
-    <!-- 왼쪽: 주파수 / 채널 / 프로그램 -->
-    <div class="flex flex-col">
-      <div id="freqText" class="leading-tight"></div>
-      <div id="stationText" class="mt-1 text-[13px] text-gray-300 leading-tight"></div>
-      <div id="nowProgram" class="mt-0.5 text-[12px] text-gray-400 leading-tight"></div>
-    </div>
-
-    <!-- 오른쪽: stereo 램프 + mute 버튼 (텍스트는 제거) -->
-    <div class="flex flex-col items-end gap-1">
-      <!-- stereo 라인: 텍스트 제거 -->
-      <div class="flex items-center gap-1">
-        <div id="stereoLamp" class="stereo"></div>
+  <div id="dialInfo">
+    <div class="flex items-start justify-between">
+      <!-- 왼쪽: 주파수 / 채널 / 프로그램 -->
+      <div class="flex flex-col">
+        <div id="freqText" class="leading-tight"></div>
+        <div id="stationText" class="mt-1 text-[13px] text-gray-300 leading-tight"></div>
+        <div id="nowProgram" class="mt-0.5 text-[12px] text-gray-400 leading-tight"></div>
       </div>
 
-      <!-- mute 라인: 텍스트 제거, 버튼만 유지 -->
-      <div class="flex items-center gap-1">
-        <button
-          id="muteBtn"
-          class="w-2 h-2 rounded-full bg-yellow-400/40"
-        ></button>
+      <!-- 오른쪽: stereo 램프 + mute 버튼 (텍스트 제거, 버튼 유지) -->
+      <div class="flex flex-col items-end gap-1">
+        <div class="flex items-center gap-1">
+          <div id="stereoLamp" class="stereo"></div>
+        </div>
+        <div class="flex items-center gap-1">
+          <button
+            id="muteBtn"
+            class="w-2 h-2 rounded-full bg-yellow-400/40"
+            aria-label="음소거 전환"
+          ></button>
+        </div>
       </div>
     </div>
   </div>
+
+  <div id="tabs" class="flex justify-around px-6 mt-6"></div>
+  <div id="channelList" class="px-4 py-4"></div>
 </div>
-
-
-
-
-<div id="tabs" class="flex justify-around px-6 mt-6"></div>
-<div id="channelList" class="px-4 py-4"></div>
 
 <script>
 // ========================================
@@ -491,7 +488,6 @@ const muteBtn = document.getElementById('muteBtn');
 // ========================================
 function updateMuteUI() {
   if (isMuted) {
-    // 뮤트 ON: 붉은색 작은 불 + 번짐
     muteBtn.classList.add(
       'bg-red-500',
       'shadow',
@@ -501,7 +497,6 @@ function updateMuteUI() {
       'bg-yellow-400/40'
     );
   } else {
-    // 뮤트 OFF: 노란 불, 번짐 없음
     muteBtn.classList.remove(
       'bg-red-500',
       'shadow',
@@ -517,13 +512,11 @@ muteBtn.addEventListener('click', () => {
   if (!audio.src) return;
 
   if (isMuted) {
-    // 언뮤트
     isMuted = false;
     audio.muted = false;
     if (lastVolumeBeforeMute <= 0) lastVolumeBeforeMute = 1;
     audio.volume = currentVolume * originalVolume * lastVolumeBeforeMute;
   } else {
-    // 뮤트
     isMuted = true;
     lastVolumeBeforeMute = audio.volume > 0 ? audio.volume / (originalVolume || 1) : currentVolume;
     audio.muted = true;
@@ -659,27 +652,24 @@ function updateNowProgram() {
   for (let i = 0; i < list.length; i++) {
     const cur = toMin(list[i].time || list[i].start);
     const next = list[i + 1] ? toMin(list[i + 1].time || list[i + 1].start) : 9999;
-  if (nowMin >= cur && nowMin < next) {
-  const title = list[i].title || list[i].name || '';
-  nowProgram.textContent = title;
+    if (nowMin >= cur && nowMin < next) {
+      const title = list[i].title || list[i].name || '';
+      nowProgram.textContent = title;
 
-  if (power && !audio.paused) {
-    const flat = channels.flatMap(g => g.list);
-    const currentChannel = flat.find(ch => ch.url === audio.src);
-    if (currentChannel) {
-      // Media Session 메타데이터
-      updateMediaSession(currentChannel, title);
-
-      // 화면에도 채널명 + 제목 반영
-      if (title) {
-        stationText.textContent = currentChannel.name + ' - ' + title;
-      } else {
-        stationText.textContent = currentChannel.name;
+      if (power && !audio.paused) {
+        const flat = channels.flatMap(g => g.list);
+        const currentChannel = flat.find(ch => ch.url === audio.src);
+        if (currentChannel) {
+          updateMediaSession(currentChannel, title);
+          if (title) {
+            stationText.textContent = currentChannel.name + ' - ' + title;
+          } else {
+            stationText.textContent = currentChannel.name;
+          }
+        }
       }
+      return;
     }
-  }
-  return;
-}
   }
   nowProgram.textContent = '';
 }
@@ -941,7 +931,6 @@ audio.addEventListener('playing', () => {
   const currentChannel = flat.find(ch => ch.url === audio.src);
 
   if (currentChannel) {
-    // 채널명 + 현재 방송 제목을 함께 표시
     if (nowProgram.textContent && nowProgram.textContent.trim() !== '') {
       stationText.textContent = currentChannel.name + ' - ' + nowProgram.textContent;
     } else {
@@ -1047,6 +1036,11 @@ range.addEventListener('input', () => {
 
   const isIOSDevice = /iPhone|iPad|iPod/i.test(navigator.userAgent);
 
+  // iOS에서 손가락 올려놓고 있는 동안엔 바늘만 업데이트
+  if (isIOSDevice && isTouching) {
+    return;
+  }
+
   if (!isChanging && !isDirectTuning) {
     if (isIOSDevice || !isTouching) {
       stationText.textContent = '스캔중...';
@@ -1149,7 +1143,7 @@ if (isIOS) {
     const x = e.touches[0].clientX;
     const dx = x - lastTouchX;
     lastTouchX = x;
-    const sensitivity = 0.03;
+    const sensitivity = 0.07; // 감도 강화
     let v = parseFloat(range.value);
     v += dx * sensitivity;
     v = Math.max(MIN, Math.min(MAX, v));
