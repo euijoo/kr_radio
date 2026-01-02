@@ -1,1 +1,1480 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>FM Radio</title>
+<script src="https://cdn.tailwindcss.com"></script>
 
+<style>
+
+#tabs {
+  display: flex;
+  justify-content: space-around;
+  padding: 0 24px;
+  margin-top: 24px;
+  gap: 35px;  /* 버튼 간격 조절 */
+}
+
+
+
+
+.tab {
+  cursor: pointer;
+  font-weight: 400;
+  font-size: 10px;
+  color: #666;
+  padding-bottom: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 30px;
+  position: relative;
+  transition: all 0.3s ease;
+  border-bottom: none !important;
+}
+
+.tab-button {
+  width: 45px;
+  height: 45px;
+  border-radius: 90%;
+  border: none;
+  box-shadow: none;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.tab.active {
+  border-bottom: none;
+}
+
+.tab-label {
+  font-size: 11px;
+  font-weight: 300;
+  letter-spacing: 0.5px;
+  order: -1;
+  transition: color 0.3s ease;
+}
+
+.tab.active .tab-label {
+  font-weight: 500;
+}
+
+/* 각 방송국별 색상 */
+.tab-button.sbs {
+  background: #e89a3c;
+}
+
+.tab-button.mbc {
+  background: #e66841;
+}
+
+.tab-button.kbs {
+  background: #a94442;
+}
+
+.tab-button.etc {
+  background: #8b9456;
+}
+
+/* 선택 시 텍스트 색상 변경 */
+.tab.active .tab-button.sbs ~ .tab-label {
+  color: #e89a3c;
+}
+
+.tab.active .tab-button.mbc ~ .tab-label {
+  color: #e66841;
+}
+
+.tab.active .tab-button.kbs ~ .tab-label {
+  color: #a94442;
+}
+
+.tab.active .tab-button.etc ~ .tab-label {
+  color: #8b9456;
+}
+
+
+
+
+body {
+  overflow: hidden;
+  overscroll-behavior: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: pan-y;
+}
+
+* {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+#dial {
+  --dial-height: 180px;
+  height: var(--dial-height);
+  position: relative;
+}
+
+.scale {
+  position: absolute;
+  bottom: 15px;
+  left: 0;
+  right: 0;
+  height: 80px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 0 30px;
+}
+
+.tick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+.tick.major .tick-mark {
+  width: 1.6px;
+  height: 24px;
+  background: #00d9ff;
+  margin-bottom: 6px;
+  box-shadow: 0 0 4px #00d9ff;
+}
+
+.tick.major .tick-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: #00d9ff;
+  text-shadow: 0 0 6px rgba(0,217,255,0.6);
+}
+
+.tick.medium .tick-mark {
+  width: 1.5px;
+  height: 27px;
+  background: #00b8dd;
+  margin-bottom: 6px;
+}
+
+.tick.minor .tick-mark {
+  width: 1px;
+  height: 20px;
+  background: #008ba8;
+  margin-bottom: 6px;
+  opacity: 0.7;
+}
+
+.am-scale {
+  position: absolute;
+  top: 15px;
+  left: 0;
+  right: 0;
+  height: 50px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 0 30px;
+  opacity: 0.5;
+}
+
+.am-tick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.am-tick-label {
+  font-size: 9px;
+  color: #00d9ff;
+  margin-bottom: 4px;
+  text-shadow: 0 0 4px rgba(0,217,255,0.4);
+}
+
+.am-tick-mark {
+  width: 1px;
+  height: 10px;
+  background: #00d9ff;
+}
+
+.am-tick.major .am-tick-mark {
+  height: 14px;
+  width: 1.5px;
+}
+
+#needle {
+  position: absolute;
+  top: -12px;
+  width: 3px;
+  height: calc(var(--dial-height) + 24px);
+  background: linear-gradient(to bottom, #ff3333, #cc0000);
+  box-shadow: 0 0 12px rgba(255,51,51,0.9);
+  z-index: 10;
+  transition: left .06s ease-out;  /* ✨ 매우 빠른 반응 */
+}
+
+
+
+
+#dialInfo {
+  padding: 10px 12px 0;
+}
+
+#freqText {
+  font-size: 32px;
+  font-weight: 600;
+}
+
+#stationText {
+  font-size: 13px;
+  color: #9ca3af;
+  margin-top: 4px;
+}
+
+#nowProgram {
+  font-size: 12px;
+  color: #d1d5db;
+  margin-top: 2px;
+  min-height: 18px;
+  line-height: 18px;
+}
+
+#stereoLamp {
+  margin-bottom: 10px;
+}
+
+.stereo {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #0f0;
+  box-shadow: 0 0 10px #0f0;
+  opacity: 0;
+  transition: .3s;
+}
+
+.stereo.on {
+  opacity: 1;
+}
+
+.power-on {
+  background: #154efa !important;
+  box-shadow: 0 0 12px #154efa;
+}
+
+#channelList {
+  overflow: hidden;
+  height: 0;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: height .45s, opacity .3s, transform .45s;
+}
+
+#channelList.open {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.channel-item {
+  opacity: 0;
+  transform: translateY(6px);
+  transition: .35s;
+}
+
+#channelList.open .channel-item {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+#freqRange {
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+</style>
+</head>
+
+<body class="bg-neutral-900 text-white max-w-md mx-auto">
+
+<header class="flex justify-between items-center px-4 py-3 text-lg font-semibold">
+  <div>
+    <div>FM Radio</div>
+    <div id="currentTime" class="text-xs font-normal text-gray-400 mt-0.5"></div>
+  </div>
+  <button id="powerBtn" class="w-9 h-9 rounded-full bg-neutral-700"></button>
+</header>
+
+<div class="px-4">
+  <div id="dial" class="relative rounded-xl overflow-hidden bg-gradient-to-b from-neutral-800 to-neutral-900">
+    <div id="scale" class="scale"></div>
+    <div id="needle"></div>
+    <input id="freqRange" type="range" min="87.5" max="108" step="0.1" class="absolute inset-0 opacity-0 z-20">
+  </div>
+
+  <div id="dialInfo">
+    <div class="flex items-center justify-between">
+      <div id="freqText"></div>
+      <div id="stereoLamp" class="stereo"></div>
+    </div>
+    <div id="stationText"></div>
+    <div id="nowProgram"></div>
+  </div>
+</div>
+
+<div id="tabs" class="flex justify-around px-6 mt-6"></div>
+<div id="channelList" class="px-4 py-4"></div>
+
+<script>
+
+// ========================================
+// 주파수 스캔 시 방송 혼합 효과 (iOS 지원 수정)
+// ========================================
+let scanAudios = [];
+let scanInterval = null;
+let lastTunedFreq = null;
+let originalVolume = 1;
+let isDirectTuning = false;
+let isScanningActive = false;
+let audioContext = null;  // ✨ Web Audio API용 컨텍스트
+
+function startScan(currentFreq) {
+  if (isDirectTuning || isChanging) {
+    return;
+  }
+  
+  isScanningActive = true;
+  
+  if (lastTunedFreq && Math.abs(currentFreq - lastTunedFreq) >= 2 && !audio.paused) {
+    const fadeOutInterval = setInterval(() => {
+      if (audio.volume > 0.05) {
+        audio.volume = Math.max(0, audio.volume - 0.15);
+      } else {
+        audio.pause();
+        audio.volume = originalVolume;
+        clearInterval(fadeOutInterval);
+      }
+    }, 30);
+  }
+  
+  stopScan();
+  
+  const flat = channels.flatMap(g => g.list);
+  const nearbyStations = flat.filter(ch => 
+    Math.abs(ch.freq - currentFreq) <= 2
+  );
+  
+  // ✨ iOS 감지
+  const isIOSDevice = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  
+  if (isIOSDevice) {
+    // ✨ iOS에서는 노이즈만 강하게 + 가장 가까운 방송 하나만
+    const nearestStation = nearbyStations.reduce((a, b) => 
+      Math.abs(b.freq - currentFreq) < Math.abs(a.freq - currentFreq) ? b : a
+    , {freq: 0});
+    
+    const distanceToNearest = Math.abs(nearestStation.freq - currentFreq);
+    
+    // 가까운 방송 하나만 약하게 재생
+    if (distanceToNearest <= 1.5 && nearestStation.url) {
+      const tempAudio = new Audio(nearestStation.url);
+      const volume = Math.max(0, 1 - (distanceToNearest / 1.5));
+      tempAudio.volume = volume * 0.25;  // iOS는 볼륨 더 낮게
+      tempAudio.play().catch(() => {});
+      scanAudios.push(tempAudio);
+    }
+    
+    // 노이즈를 더 강하게
+    noiseGain.gain.value = Math.min(0.3, distanceToNearest * 0.12);
+    
+  } else {
+    // ✨ PC에서는 기존 방식 (여러 방송 혼합)
+    nearbyStations.forEach(station => {
+      const distance = Math.abs(station.freq - currentFreq);
+      const volume = Math.max(0, 1 - (distance / 2));
+      
+      if (volume > 0.1) {
+        const tempAudio = new Audio(station.url);
+        tempAudio.volume = volume * 0.4;
+        tempAudio.play().catch(() => {});
+        scanAudios.push(tempAudio);
+      }
+    });
+    
+    const nearestStation = nearbyStations.reduce((a, b) => 
+      Math.abs(b.freq - currentFreq) < Math.abs(a.freq - currentFreq) ? b : a
+    , {freq: 0});
+    
+    const distanceToNearest = Math.abs(nearestStation.freq - currentFreq);
+    noiseGain.gain.value = Math.min(0.2, distanceToNearest * 0.08);
+  }
+}
+
+function stopScan() {
+  console.log('스캔 중지 - 임시 오디오:', scanAudios.length);
+  
+  scanAudios.forEach((audio, index) => {
+    try {
+      audio.pause();
+      audio.currentTime = 0;
+      audio.src = '';
+      audio.load();  // ✨ 완전히 해제
+    } catch (e) {
+      console.log(`임시 오디오 ${index} 정리 오류:`, e);
+    }
+  });
+  scanAudios = [];
+  isScanningActive = false;
+  noiseGain.gain.value = 0;
+}
+
+
+
+
+// ========================================
+// 상수 및 전역 변수
+// ========================================
+const MIN = 87.5, MAX = 108;
+const audio = new Audio();
+const ctx = new (window.AudioContext || window.webkitAudioContext)();
+const noiseGain = ctx.createGain();
+noiseGain.gain.value = 0;
+
+let power = false;
+let activeGroup = null;
+let currentSchedule = null;
+let inputTimer = null;
+let isChanging = false;
+let lastTouchX = null;
+let isTouching = false;
+let lastTouchEnd = 0;
+
+  // --- 공용 볼륨/페이드 유틸 ---
+let fadeTimer = null;
+
+function clearFade() {
+  if (fadeTimer) {
+    clearInterval(fadeTimer);
+    fadeTimer = null;
+  }
+}
+
+function setVolumeInstant(volume) {
+  clearFade();
+  audio.volume = Math.max(0, Math.min(1, volume));
+}
+
+function fadeToVolume(targetVolume = originalVolume, duration = 800) {
+  clearFade();
+  targetVolume = Math.max(0, Math.min(1, targetVolume));
+
+  const startVolume = audio.volume;
+  const diff = targetVolume - startVolume;
+  if (diff === 0) return;
+
+  const steps = 20;
+  const stepTime = duration / steps;
+  let currentStep = 0;
+
+  fadeTimer = setInterval(() => {
+    currentStep++;
+    const ratio = currentStep / steps;
+    const v = startVolume + diff * ratio;
+    audio.volume = Math.max(0, Math.min(1, v));
+
+    if (currentStep >= steps || audio.paused) {
+      audio.volume = targetVolume;
+      clearFade();
+    }
+  }, stepTime);
+}
+
+function fadeIn(targetVolume = originalVolume, duration = 800) {
+  setVolumeInstant(0);
+  fadeToVolume(targetVolume, duration);
+}
+
+function fadeOut(duration = 500) {
+  fadeToVolume(0, duration);
+}
+// --- 공용 볼륨/페이드 유틸 끝 ---
+
+
+// DOM 요소
+const range = document.getElementById('freqRange');
+const needle = document.getElementById('needle');
+const freqText = document.getElementById('freqText');
+const stationText = document.getElementById('stationText');
+const nowProgram = document.getElementById('nowProgram');
+const stereo = document.getElementById('stereoLamp');
+const powerBtn = document.getElementById('powerBtn');
+const tabs = document.getElementById('tabs');
+const channelList = document.getElementById('channelList');
+const scale = document.getElementById('scale');
+
+// ========================================
+// 채널 데이터
+// ========================================
+const channels = [
+  {
+    group: 'S B S',
+    list: [
+      {name: 'SBS 파워FM', freq: 107.7, url: 'https://radio.bsod.kr/stream/?stn=sbs&ch=powerfm', json: 'schedule/sbs-powerfm.json'},
+      {name: 'SBS 러브FM', freq: 103.5, url: 'https://radio.bsod.kr/stream/?stn=sbs&ch=lovefm', json: 'schedule/sbs-lovefm.json'},
+      {name: 'SBS 고릴라디오M', freq: 88.5, url: 'https://radio.bsod.kr/stream/?stn=sbs&ch=dmb', json: 'schedule/sbs-gorillam.json'}
+    ]
+  },
+  {
+    group: 'M B C',
+    list: [
+      {name: 'MBC FM4U', freq: 91.9, url: 'https://radio.bsod.kr/stream/?stn=mbc&ch=fm4u', json: 'schedule/mbc-fm4u.json'},
+      {name: 'MBC 표준FM', freq: 95.9, url: 'https://radio.bsod.kr/stream/?stn=mbc&ch=sfm', json: 'schedule/mbc-standardfm.json'},
+      {name: 'MBC 올댓뮤직', freq: 100.7, url: 'https://radio.bsod.kr/stream/?stn=mbc&ch=chm', json: 'schedule/mbc-allthatmusic.json'}
+    ]
+  },
+  {
+    group: 'K B S',
+    list: [
+      {name: 'KBS 1라디오', freq: 97.3, url: 'https://radio.bsod.kr/stream/?stn=kbs&ch=1radio', json: 'schedule/kbs-1radio.json'},
+      {name: 'KBS 2라디오', freq: 106.1, url: 'https://radio.bsod.kr/stream/?stn=kbs&ch=2radio', json: 'schedule/kbs-happyfm.json'},
+      {name: 'KBS 3라디오', freq: 104.9, url: 'https://radio.bsod.kr/stream/?stn=kbs&ch=3radio', json: 'schedule/kbs-3radio.json'},
+      {name: 'KBS 1FM', freq: 93.1, url: 'https://radio.bsod.kr/stream/?stn=kbs&ch=1fm', json: 'schedule/kbs-classicfm.json'},
+      {name: 'KBS 2FM', freq: 89.1, url: 'https://radio.bsod.kr/stream/?stn=kbs&ch=2fm', json: 'schedule/kbs-coolfm.json'}
+    ]
+  },
+  {
+    group: 'E T C',
+    list: [
+      {name: 'EBS FM', freq: 104.5, url: 'https://radio.bsod.kr/stream/?stn=ebs'},
+      {name: 'TBS FM', freq: 95.1, url: 'https://radio.bsod.kr/stream/?stn=tbs&ch=fm'},
+      {name: 'TBS eFM', freq: 101.3, url: 'https://radio.bsod.kr/stream/?stn=tbs&ch=efm'},
+      {name: 'CBS 표준FM', freq: 98.1, url: 'https://radio.bsod.kr/stream/?stn=cbs&ch=sfm'},
+      {name: 'CBS 음악FM', freq: 93.9, url: 'https://radio.bsod.kr/stream/?stn=cbs&ch=mfm'},
+      {name: 'CBS JOY4U', freq: 90.1, url: 'https://radio.bsod.kr/stream/?stn=cbs&ch=joy4u'}
+    ]
+  }
+];
+
+// ========================================
+// 노이즈 생성
+// ========================================
+const buffer = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
+const data = buffer.getChannelData(0);
+for (let i = 0; i < data.length; i++) {
+  data[i] = (Math.random() * 2 - 1) * 0.5;
+}
+const noise = ctx.createBufferSource();
+noise.buffer = buffer;
+noise.loop = true;
+noise.connect(noiseGain).connect(ctx.destination);
+noise.start();
+
+// ========================================
+// UI 생성: FM 눈금
+// ========================================
+for (let freq = 88; freq <= 108; freq += 0.5) {
+  const tick = document.createElement('div');
+  
+  if (freq % 4 === 0) {
+    tick.className = 'tick major';
+    tick.innerHTML = `
+      <div class="tick-mark"></div>
+      <div class="tick-label">${Math.round(freq)}</div>
+    `;
+  } else if (freq % 2 === 0) {
+    tick.className = 'tick medium';
+    tick.innerHTML = `<div class="tick-mark"></div>`;
+  } else {
+    tick.className = 'tick minor';
+    tick.innerHTML = `<div class="tick-mark"></div>`;
+  }
+  
+  scale.appendChild(tick);
+}
+
+// ========================================
+// UI 생성: AM 눈금 (장식용)
+// ========================================
+const amScale = document.createElement('div');
+amScale.className = 'am-scale';
+[530, 630, 810, 1080, 1350, 1620].forEach(freq => {
+  const tick = document.createElement('div');
+  tick.className = 'am-tick major';
+  tick.innerHTML = `
+    <div class="am-tick-label">${freq}</div>
+    <div class="am-tick-mark"></div>
+  `;
+  amScale.appendChild(tick);
+});
+document.getElementById('dial').insertBefore(amScale, scale);
+
+// ========================================
+// 방송 스케줄 관리
+// ========================================
+async function loadSchedule(path) {
+  try {
+    const r = await fetch(path);
+    currentSchedule = await r.json();
+    updateNowProgram();
+  } catch {
+    currentSchedule = null;
+    nowProgram.textContent = '';
+  }
+}
+
+function dayKey() {
+  const d = new Date().getDay();
+  return d === 6 ? 'saturday' : d === 0 ? 'sunday' : 'weekday';
+}
+
+function toMin(t) {
+  let [h, m] = t.split(":").map(Number);
+  if (h < 5) h += 24;
+  return h * 60 + m;
+}
+
+function updateNowProgram() {
+  if (!currentSchedule) return;
+  const now = new Date();
+  let nowMin = now.getHours() * 60 + now.getMinutes();
+  if (now.getHours() < 5) nowMin += 1440;
+  const list = currentSchedule.schedule[dayKey()] || currentSchedule.schedule.weekday;
+  
+  for (let i = 0; i < list.length; i++) {
+    const cur = toMin(list[i].time || list[i].start);
+    const next = list[i + 1] ? toMin(list[i + 1].time || list[i + 1].start) : 9999;
+    if (nowMin >= cur && nowMin < next) {
+      nowProgram.textContent = list[i].title;
+      
+      if (power && !audio.paused) {
+        const flat = channels.flatMap(g => g.list);
+        const currentChannel = flat.find(ch => ch.url === audio.src);
+        if (currentChannel) {
+          updateMediaSession(currentChannel, list[i].title);
+        }
+      }
+      return;
+    }
+  }
+  nowProgram.textContent = '';
+}
+
+setInterval(updateNowProgram, 60000);
+
+// ========================================
+// 바늘 위치 업데이트
+// ========================================
+function updateNeedle(f) {
+  const majorFreqs = [88, 92, 96, 100, 104, 108];
+  const ticks = document.querySelectorAll('.tick.major');
+  
+  if (ticks.length === 0) {
+    needle.style.left = ((f - MIN) / (MAX - MIN) * dial.clientWidth) + 'px';
+    freqText.textContent = f.toFixed(1) + ' MHz';
+    return;
+  }
+  
+  let position;
+  if (f <= majorFreqs[0]) {
+    position = ticks[0].offsetLeft + (ticks[0].offsetWidth / 2);
+  } else if (f >= majorFreqs[majorFreqs.length - 1]) {
+    position = ticks[ticks.length - 1].offsetLeft + (ticks[ticks.length - 1].offsetWidth / 2);
+  } else {
+    for (let i = 0; i < majorFreqs.length - 1; i++) {
+      if (f >= majorFreqs[i] && f <= majorFreqs[i + 1]) {
+        const tick1 = ticks[i].offsetLeft + (ticks[i].offsetWidth / 2);
+        const tick2 = ticks[i + 1].offsetLeft + (ticks[i + 1].offsetWidth / 2);
+        const ratio = (f - majorFreqs[i]) / (majorFreqs[i + 1] - majorFreqs[i]);
+        position = tick1 + (tick2 - tick1) * ratio;
+        break;
+      }
+    }
+  }
+  
+  needle.style.left = position + 'px';
+  freqText.textContent = f.toFixed(1) + ' MHz';
+}
+
+// ========================================
+// Media Session 업데이트
+// ========================================
+function updateMediaSession(channel, programTitle) {
+  if (!('mediaSession' in navigator)) return;
+
+  const title = programTitle || channel.name;
+  const artist = channel.group || 'FM Radio';
+
+  navigator.mediaSession.metadata = new MediaMetadata({
+    title: title,
+    artist: artist,
+    album: 'FM Radio',
+    artwork: [
+      {src: 'bg-radio.png', sizes: '512x512', type: 'image/png'}
+    ]
+  });
+}
+
+// ========================================
+// 채널 튜닝 (속도 최적화)
+// ========================================
+async function snapTo(freq) {
+  console.log('=== snapTo 호출 ===', freq);
+  
+  // 모든 오디오 활동 즉시 중단
+  isDirectTuning = true;
+  stopScan();
+  
+  // iOS 감지
+  const isIOSDevice = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  
+  // 기존 오디오 완전 정리
+  if (audio.src) {
+    audio.pause();
+    audio.currentTime = 0;
+  }
+  
+  // ✨ 대기 시간 단축 (150ms → 50ms, 50ms → 30ms)
+  await new Promise(resolve => setTimeout(resolve, isIOSDevice ? 50 : 30));
+  
+  // 가장 가까운 채널 찾기
+  const flat = channels.flatMap(g => g.list);
+  const nearest = flat.reduce((a, b) =>
+    Math.abs(b.freq - freq) < Math.abs(a.freq - freq) ? b : a
+  );
+
+  console.log('선택된 채널:', nearest.name, nearest.freq);
+
+  // UI 업데이트
+  range.value = nearest.freq;
+  updateNeedle(nearest.freq);
+  stationText.textContent = nearest.name;
+  
+  // ✨ 편성표는 비동기로 백그라운드 로드 (재생을 막지 않음)
+  if (nearest.json) {
+    loadSchedule(nearest.json); // await 제거
+  } else {
+    currentSchedule = null;
+    nowProgram.textContent = '';
+  }
+  
+  // 전원 꺼져있으면 중단
+  if (!power) {
+    stereo.classList.remove('on');
+    isDirectTuning = false;
+    noiseGain.gain.value = 0;
+    return;
+  }
+
+  // 노이즈 끄기
+  noiseGain.gain.value = 0;
+  stereo.classList.remove('on');
+  
+  // 같은 채널이면서 정상 재생 중이면 유지
+  if (audio.src === nearest.url && !audio.paused && audio.readyState >= 2) {
+    console.log('✅ 같은 채널 유지');
+    stationText.textContent = nearest.name;
+    stereo.classList.add('on');
+    lastTunedFreq = nearest.freq;
+    isDirectTuning = false;
+    return;
+  }
+
+  console.log("🔄 새 채널 로드:", nearest.url);
+  stationText.textContent = nearest.name + ' 연결 중...';
+  
+  try {
+    // 완전 초기화
+    audio.pause();
+    audio.src = '';
+    audio.currentTime = 0;
+    
+    // ✨ 초기화 대기 시간 단축 (200ms → 80ms, 100ms → 50ms)
+    await new Promise(resolve => setTimeout(resolve, isIOSDevice ? 80 : 50));
+    
+    // 새 URL 설정
+    audio.src = nearest.url;
+    audio.volume = originalVolume;
+    audio.load();
+    
+    // ✨ 재생 준비 대기 시간 단축 (10초 → 6초)
+    console.log('⏳ 스트림 로드 대기...');
+    const readyPromise = new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error('스트림 로드 타임아웃 (6초)'));
+      }, 6000); // ✨ 10초 → 6초
+      
+      const onCanPlay = () => {
+        console.log('✅ canplay 이벤트, readyState:', audio.readyState);
+        clearTimeout(timeout);
+        audio.removeEventListener('canplay', onCanPlay);
+        audio.removeEventListener('loadeddata', onLoadedData);
+        audio.removeEventListener('error', onError);
+        resolve();
+      };
+      
+      const onLoadedData = () => {
+        console.log('✅ loadeddata 이벤트, readyState:', audio.readyState);
+        // ✨ readyState 2 이상이면 바로 재생 가능
+        if (audio.readyState >= 2) {
+          clearTimeout(timeout);
+          audio.removeEventListener('canplay', onCanPlay);
+          audio.removeEventListener('loadeddata', onLoadedData);
+          audio.removeEventListener('error', onError);
+          resolve();
+        }
+      };
+      
+      const onError = () => {
+        clearTimeout(timeout);
+        audio.removeEventListener('canplay', onCanPlay);
+        audio.removeEventListener('loadeddata', onLoadedData);
+        audio.removeEventListener('error', onError);
+        reject(new Error('스트림 로드 에러'));
+      };
+      
+      audio.addEventListener('canplay', onCanPlay);
+      audio.addEventListener('loadeddata', onLoadedData);
+      audio.addEventListener('error', onError);
+      
+      // 이미 준비되어 있는지 확인
+      if (audio.readyState >= 2) {
+        clearTimeout(timeout);
+        audio.removeEventListener('canplay', onCanPlay);
+        audio.removeEventListener('loadeddata', onLoadedData);
+        audio.removeEventListener('error', onError);
+        resolve();
+      }
+    });
+    
+    await readyPromise;
+    console.log('✅ 스트림 준비 완료');
+    
+    // ✨ 재생 시도 (최대 3번으로 단축, 빠른 실패)
+    let retryCount = 0;
+    const maxRetries = 3; // ✨ 5번 → 3번
+    let playSuccess = false;
+    
+    while (retryCount < maxRetries && !playSuccess) {
+      try {
+        console.log(`▶️ 재생 시도 ${retryCount + 1}/${maxRetries}`);
+        
+        // iOS는 재시도 시 reload
+        if (isIOSDevice && retryCount > 0) {
+          console.log('🔄 iOS reload');
+          audio.load();
+          await new Promise(resolve => setTimeout(resolve, 150)); // ✨ 300ms → 150ms
+        }
+        
+        // 재생 시작
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          await playPromise;
+        }
+        
+        // ✨ 재생 상태 확인 대기 시간 단축 (200ms → 100ms)
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        if (!audio.paused && audio.readyState >= 2) {
+          console.log('✅ 재생 성공!');
+          playSuccess = true;
+          stationText.textContent = nearest.name;
+          stereo.classList.add('on');
+          lastTunedFreq = nearest.freq;
+          break;
+        } else {
+          console.log('⚠️ 재생 상태 불안정, paused:', audio.paused, 'readyState:', audio.readyState);
+          throw new Error('재생 상태 확인 실패');
+        }
+        
+      } catch (err) {
+        retryCount++;
+        console.log(`❌ 재생 실패 ${retryCount}/${maxRetries}:`, err.message);
+        
+        if (retryCount >= maxRetries) {
+          throw err;
+        }
+        
+        // ✨ 재시도 대기 시간 단축 (200ms → 100ms 기준)
+        const waitTime = 100 * retryCount; // 100ms, 200ms, 300ms
+        console.log(`⏱️ ${waitTime}ms 대기 후 재시도`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
+    }
+    
+    if (!playSuccess) {
+      throw new Error('최대 재시도 횟수 초과');
+    }
+    
+  } catch (e) {
+    console.error("💥 재생 오류:", e.message);
+    stereo.classList.remove("on");
+    noiseGain.gain.value = 0;
+    stationText.textContent = nearest.name + " - 재생 오류";
+    
+    // ✨ 자동 재연결 시간 단축 (5초 → 3초)
+    console.log('⏰ 3초 후 자동 재연결 예약');
+    setTimeout(async () => {
+      if (power && (audio.paused || audio.readyState < 3)) {
+        console.log('🔄 자동 재연결 시작');
+        stationText.textContent = nearest.name + ' 재연결 중...';
+        
+        try {
+          audio.pause();
+          audio.src = '';
+          audio.currentTime = 0;
+          await new Promise(resolve => setTimeout(resolve, 150)); // ✨ 300ms → 150ms
+          
+          audio.src = nearest.url;
+          audio.volume = originalVolume;
+          audio.load();
+          
+          await new Promise(resolve => setTimeout(resolve, 300)); // ✨ 500ms → 300ms
+          
+          await audio.play();
+          console.log('✅ 자동 재연결 성공');
+          stationText.textContent = nearest.name;
+          stereo.classList.add('on');
+          
+        } catch (retryErr) {
+          console.error('❌ 자동 재연결 실패:', retryErr.message);
+          stationText.textContent = nearest.name + " - 방송 불가";
+        }
+      }
+    }, 3000); // ✨ 5000ms → 3000ms
+    
+  } finally {
+    setTimeout(() => {
+      isDirectTuning = false;
+      console.log('=== snapTo 완료 ===');
+    }, 200); // ✨ 400ms → 200ms
+  }
+}
+
+
+
+// ========================================
+// 오디오 이벤트 리스너 (완벽 검증)
+// ========================================
+
+audio.addEventListener('loadstart', () => {
+  console.log('📡 오디오 로드 시작');
+});
+
+audio.addEventListener('canplay', () => {
+  console.log('✅ 재생 가능 상태, readyState:', audio.readyState);
+});
+
+audio.addEventListener('playing', () => {
+  if (!power) return;
+  
+  noiseGain.gain.value = 0;
+  stereo.classList.add('on');
+  console.log('▶️ 방송 재생 중');
+
+  const flat = channels.flatMap(g => g.list);
+  const currentChannel = flat.find(ch => ch.url === audio.src);
+  if (currentChannel) {
+    stationText.textContent = currentChannel.name;
+    console.log('현재 방송:', currentChannel.name);
+  }
+});
+
+audio.addEventListener('waiting', () => {
+  console.log('⏳ 버퍼링 중...');
+  stereo.classList.remove('on');
+  
+  if (power && !isScanningActive) {
+    // ✨ 튜닝 중이면 노이즈 끄기
+    if (isDirectTuning || isChanging) {
+      noiseGain.gain.value = 0;
+    } else {
+      noiseGain.gain.value = 0.05;
+    }
+    
+    const flat = channels.flatMap(g => g.list);
+    const currentChannel = flat.find(ch => ch.url === audio.src);
+    if (currentChannel) {
+      // ✨ 튜닝 중이면 "연결 중", 아니면 "버퍼링"
+      if (isDirectTuning || isChanging) {
+        stationText.textContent = currentChannel.name + ' 연결 중...';
+      } else {
+        stationText.textContent = currentChannel.name + ' - 버퍼링...';
+      }
+    }
+  }
+});
+
+
+audio.addEventListener('stalled', () => {
+  console.log('⚠️ 스트림 정체 감지');
+  
+  // 5초 후에도 정체 상태면 재시도
+  setTimeout(() => {
+    if (power && audio.readyState < 3 && !audio.paused) {
+      console.log('🔄 정체 해결 시도 중...');
+      const currentSrc = audio.src;
+      if (currentSrc) {
+        audio.load();
+        audio.play().catch(err => {
+          console.error('정체 해결 실패:', err);
+        });
+      }
+    }
+  }, 5000);
+});
+
+audio.addEventListener('pause', () => {
+  console.log('⏸️ 오디오 일시정지');
+  stereo.classList.remove('on');
+  
+  if (power && !isScanningActive && !isDirectTuning) {
+    noiseGain.gain.value = 0.05;
+  }
+});
+
+audio.addEventListener('error', (e) => {
+  const errorDetails = audio.error ? {
+    code: audio.error.code,
+    message: audio.error.message
+  } : 'Unknown error';
+  
+  console.error('❌ 오디오 에러:', errorDetails);
+  stereo.classList.remove('on');
+  
+  if (power) {
+    // ✨ 튜닝 중이면 노이즈 끄기, 아니면 작은 노이즈
+    if (isDirectTuning || isChanging) {
+      noiseGain.gain.value = 0;
+    } else {
+      noiseGain.gain.value = 0.05;
+    }
+    
+    const flat = channels.flatMap(g => g.list);
+    const currentChannel = flat.find(ch => ch.url === audio.src);
+    
+    // ✨ 튜닝 중이면 "연결 중" 유지, 아니면 3초 후 에러 표시
+    if (!isDirectTuning && !isChanging) {
+      setTimeout(() => {
+        if (audio.paused || audio.readyState < 3) {
+          if (currentChannel) {
+            stationText.textContent = currentChannel.name + ' - 방송 오류';
+          } else {
+            stationText.textContent = '방송 오류';
+          }
+        }
+      }, 3000);
+    }
+    // 튜닝 중이면 기존 "연결 중" 메시지 그대로 유지
+  }
+});
+
+
+audio.addEventListener('suspend', () => {
+  console.log('⏸️ 연결 일시 중단');
+});
+
+audio.addEventListener('abort', () => {
+  console.log('🛑 로드 중단');
+});
+
+audio.addEventListener('emptied', () => {
+  console.log('🗑️ 미디어 비움');
+});
+
+
+
+// ========================================
+// 주파수 슬라이더 이벤트 (수정)
+// ========================================
+let inputDebounceTimer = null;
+let lastInputFreq = null;  // ✨ 마지막 입력 주파수 추적
+
+range.addEventListener('input', () => {
+  ctx.resume();
+  const currentFreq = +range.value;
+  lastInputFreq = currentFreq;  // ✨ 현재 주파수 저장
+  
+  updateNeedle(currentFreq);
+  clearTimeout(inputTimer);
+  clearTimeout(inputDebounceTimer);
+  
+  if (!power) {
+    noiseGain.gain.value = 0;
+    stereo.classList.remove('on');
+    return;
+  }
+  
+  const isIOSDevice = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  
+  if (!isChanging && !isDirectTuning) {
+    if (isIOSDevice || !isTouching) {
+      stationText.textContent = '스캔중...';
+      startScan(currentFreq);
+    }
+  }
+  
+  if (!isChanging) {
+    stereo.classList.remove('on');
+  }
+  
+  // ✨ 입력 후 0.5초 뒤 자동 튜닝
+  inputDebounceTimer = setTimeout(() => {
+    if (!isChanging && !isDirectTuning) {
+      console.log('자동 튜닝 실행:', currentFreq);
+      stopScan();
+      isChanging = true;  // ✨ 플래그 먼저 설정
+      snapTo(currentFreq).then(() => {
+        setTimeout(() => {
+          isChanging = false;
+        }, 100);
+      }).catch(err => {
+        console.error('자동 튜닝 오류:', err);
+        isChanging = false;
+      });
+    }
+  }, 500);
+  
+  inputTimer = setTimeout(() => {
+    if (!isDirectTuning && !isChanging) {
+      stopScan();
+    }
+  }, 550);
+});
+
+range.addEventListener('change', () => {
+  const currentFreq = +range.value;
+  console.log('change 이벤트 발생:', currentFreq, 'isChanging:', isChanging);
+  
+  if (isChanging) {
+    console.log('이미 처리 중이므로 무시');
+    return;
+  }
+  
+  // ✨ debounce 타이머 클리어
+  clearTimeout(inputDebounceTimer);
+  
+  isChanging = true;
+  stopScan();
+  
+  snapTo(currentFreq).then(() => {
+    setTimeout(() => {
+      isChanging = false;
+      console.log('튜닝 완료');
+    }, 100);
+  }).catch(err => {
+    console.error('튜닝 오류:', err);
+    isChanging = false;
+  });
+});
+
+
+// ========================================
+// 전원 버튼 (수정)
+// ========================================
+powerBtn.onclick = () => {
+  ctx.resume();
+  power = !power;
+  powerBtn.classList.toggle('power-on', power);
+  
+  if (!power) {
+    audio.pause();
+    audio.volume = originalVolume;
+    stopScan();  // ✨ 스캔 중지 (노이즈 포함)
+    noiseGain.gain.value = 0;  // ✨ 명시적으로 노이즈 끄기
+    stereo.classList.remove('on');
+    stationText.textContent = '전원 꺼짐';
+    nowProgram.textContent = '';
+    lastTunedFreq = null;
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.metadata = null;
+    }
+  } else {
+    stationText.textContent = '예열중...';
+    noiseGain.gain.value = 0.05;
+    setTimeout(() => snapTo(+range.value), 800);
+  }
+};
+
+// ========================================
+// iOS 터치 최적화 (수정)
+// ========================================
+const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+if (isIOS) {
+  range.addEventListener('touchstart', e => {
+    isTouching = true;
+    lastTouchX = e.touches[0].clientX;
+    clearTimeout(inputDebounceTimer);
+    
+    if (ctx.state === 'suspended') {
+      ctx.resume();
+    }
+  });
+  
+  range.addEventListener('touchmove', e => {
+    e.preventDefault();
+    if (lastTouchX === null) return;
+    const x = e.touches[0].clientX;
+    const dx = x - lastTouchX;
+    lastTouchX = x;
+    const sensitivity = 0.011;  // ✅ 더 부드럽게
+    let v = parseFloat(range.value);
+    v += dx * sensitivity;
+    v = Math.max(MIN, Math.min(MAX, v));
+    range.value = v.toFixed(1);
+    
+    const inputEvent = new Event('input', {bubbles: true});
+    range.dispatchEvent(inputEvent);
+  }, {passive: false});
+  
+  range.addEventListener('touchend', () => {
+  console.log('터치 종료 - 현재 주파수:', +range.value);
+  isTouching = false;
+  lastTouchX = null;
+  
+  // ✨ 모든 타이머 클리어
+  clearTimeout(inputTimer);
+  clearTimeout(inputDebounceTimer);
+  
+  setTimeout(() => {
+    const currentFreq = +range.value;
+    console.log('터치 종료 후 튜닝 시도:', currentFreq);
+    
+    if (!isChanging && !isDirectTuning) {
+      stopScan();
+      
+      isChanging = true;
+      isDirectTuning = true;  // ✨ 추가
+      
+      snapTo(currentFreq).then(() => {
+        setTimeout(() => {
+          isChanging = false;
+          console.log('터치 종료 튜닝 완료');
+        }, 200);
+      }).catch(err => {
+        console.error('터치 종료 튜닝 오류:', err);
+        isChanging = false;
+        isDirectTuning = false;
+      });
+    }
+  }, 150);  // ✨ 대기 시간 증가
+});
+
+}
+
+
+// ========================================
+// 클릭음 및 햅틱 피드백
+// ========================================
+function playClickSound() {
+  // MP3 파일 재생
+  const clickAudio = new Audio('sound/button.mp3');
+  clickAudio.volume = 0.5;  // 볼륨 조절 (0.0 ~ 1.0)
+  clickAudio.play().catch(err => {
+    console.log('클릭 사운드 재생 실패:', err);
+  });
+}
+
+function triggerHaptic() {
+  // 햅틱 피드백 (모바일에서만 작동)
+  if (navigator.vibrate) {
+    navigator.vibrate(10);  // 10ms 진동
+  }
+  
+  // iOS용 대체 (일부 브라우저)
+  if (window.Taptic && window.Taptic.impact) {
+    window.Taptic.impact('light');
+  }
+}
+
+function feedbackOnClick() {
+  playClickSound();
+  triggerHaptic();
+}
+
+
+
+// ========================================
+// 채널 리스트 UI (수정)
+// ========================================
+function closeList() {
+  channelList.style.height = channelList.scrollHeight + 'px';
+  requestAnimationFrame(() => {
+    channelList.style.height = '0px';
+    channelList.classList.remove('open');
+  });
+}
+
+const buttonColors = ['sbs', 'mbc', 'kbs', 'etc'];
+
+channels.forEach((g, index) => {
+  const tab = document.createElement('div');
+  tab.className = 'tab';
+  
+  const button = document.createElement('div');
+  button.className = `tab-button ${buttonColors[index]}`;
+  
+  const label = document.createElement('div');
+  label.className = 'tab-label';
+  label.textContent = g.group;
+  
+  tab.appendChild(button);
+  tab.appendChild(label);
+  
+  tab.onclick = () => {
+  feedbackOnClick();  // ✨ 이 줄 추가
+  
+  
+    if (activeGroup === g) {
+      closeList();
+      activeGroup = null;
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      return;
+    }
+    activeGroup = g;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    channelList.innerHTML = '';
+    g.list.forEach(ch => {
+      const d = document.createElement('div');
+      d.className = "channel-item flex justify-between bg-neutral-800 rounded-lg p-3 mb-2 cursor-pointer";
+      d.innerHTML = `<span>${ch.name}</span><span class="text-xs text-gray-400">${ch.freq.toFixed(1)}</span>`;
+      d.onclick = async () => {
+  console.log('채널 직접 선택:', ch.name);
+  
+  // ✨ 모든 타이머 취소
+  clearTimeout(inputTimer);
+  clearTimeout(inputDebounceTimer);
+  
+  isDirectTuning = true;
+  isChanging = true;  // ✨ 추가
+  stopScan();
+  
+  // ✨ iOS는 약간 대기
+  const isIOSDevice = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if (isIOSDevice) {
+    await new Promise(resolve => setTimeout(resolve, 50));
+  }
+  
+  await snapTo(ch.freq);
+  
+  closeList();
+  activeGroup = null;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  
+  // ✨ 플래그 해제
+  setTimeout(() => {
+    isChanging = false;
+  }, 200);
+};
+
+      channelList.appendChild(d);
+    });
+    
+    channelList.classList.add('open');
+    channelList.style.height = '0px';
+    
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        channelList.style.height = channelList.scrollHeight + 'px';
+      });
+    });
+  };
+  tabs.appendChild(tab);
+});
+
+
+
+
+// ========================================
+// 현재 시간 표시
+// ========================================
+function updateTime() {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2, '0');
+  const m = String(now.getMinutes()).padStart(2, '0');
+  const s = String(now.getSeconds()).padStart(2, '0');
+  document.getElementById('currentTime').textContent = h + ':' + m + ':' + s;
+}
+updateTime();
+setInterval(updateTime, 1000);
+
+// ========================================
+// 핀치 줌 및 더블탭 줌 차단
+// ========================================
+document.addEventListener('touchstart', function(e) {
+  if (e.touches.length > 1) {
+    e.preventDefault();
+  }
+}, {passive: false});
+
+document.addEventListener('touchmove', function(e) {
+  if (e.touches.length > 1) {
+    e.preventDefault();
+  }
+}, {passive: false});
+
+document.addEventListener('touchend', function(e) {
+  const now = Date.now();
+  if (now - lastTouchEnd <= 300) {
+    e.preventDefault();
+  }
+  lastTouchEnd = now;
+}, {passive: false});
+
+// ========================================
+// 데스크톱 마우스 이벤트도 추가
+// ========================================
+let isMouseDown = false;
+
+range.addEventListener('mousedown', () => {
+  isMouseDown = true;
+  clearTimeout(inputDebounceTimer);
+});
+
+range.addEventListener('mouseup', () => {
+  console.log('마우스 업 - 현재 주파수:', +range.value);
+  isMouseDown = false;
+  
+  setTimeout(() => {
+    const currentFreq = +range.value;
+    console.log('마우스 업 후 튜닝 시도:', currentFreq, 'isChanging:', isChanging);
+    
+    if (!isChanging && !isDirectTuning) {
+      clearTimeout(inputDebounceTimer);
+      stopScan();
+      
+      isChanging = true;
+      snapTo(currentFreq).then(() => {
+        setTimeout(() => {
+          isChanging = false;
+          console.log('마우스 업 튜닝 완료');
+        }, 100);
+      }).catch(err => {
+        console.error('마우스 업 튜닝 오류:', err);
+        isChanging = false;
+      });
+    }
+  }, 50);
+});
+
+
+
+
+
+
+
+
+
+
+
+// ========================================
+// 초기화
+// ========================================
+range.value = 91.9;
+updateNeedle(91.9);
+stationText.textContent = '전원 꺼짐';
+</script>
+
+</body>
+</html>
