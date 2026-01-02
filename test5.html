@@ -290,30 +290,44 @@ body {
   </div>
 
 <div id="dialInfo">
-  <!-- 첫 줄: 주파수 + (stereo 텍스트 + 램프) -->
-  <div class="flex items-center justify-between">
-    <!-- 왼쪽: 주파수 텍스트 -->
-    <div id="freqText"></div>
+  <!-- 첫 줄: 왼쪽(주파수+채널명+제목), 오른쪽(stereo / mute) -->
+  <div class="flex items-start justify-between">
+    <!-- 왼쪽: 주파수 / 방송채널 / 방송제목 (3줄) -->
+    <div class="flex flex-col">
+      <!-- 1줄: 주파수 -->
+      <div id="freqText" class="leading-tight"></div>
 
-    <!-- 오른쪽: stereo 텍스트 왼쪽, 램프 오른쪽 -->
-    <div class="flex items-center gap-1">
-      <div id="stereoLamp" class="stereo"></div>
+      <!-- 2줄: 방송 채널 이름 -->
+      <div id="stationText" class="mt-1 text-[13px] text-gray-300 leading-tight"></div>
+
+      <!-- 3줄: 방송 제목 -->
+      <div id="nowProgram" class="mt-0.5 text-[12px] text-gray-400 leading-tight"></div>
+    </div>
+
+    <!-- 오른쪽: stereo 램프 + mute 불빛 -->
+    <div class="flex flex-col items-end gap-0.5">
+      <!-- stereo 라인 -->
+      <div class="flex items-center gap-0.5">
+        <span class="text-[9px] text-gray-400 tracking-[0.18em] uppercase">
+          stereo
+        </span>
+        <div id="stereoLamp" class="stereo"></div>
+      </div>
+
+      <!-- mute 라인 -->
+      <div class="flex items-center gap-0.5">
+        <span class="text-[9px] text-gray-500 tracking-[0.18em] uppercase">
+          mute
+        </span>
+        <button
+          id="muteBtn"
+          class="w-2 h-2 rounded-full bg-yellow-400/40"
+        ></button>
+      </div>
     </div>
   </div>
-
-  <!-- 둘째 줄: 오른쪽 끝에 (mute 텍스트 + 버튼), 위아래 간격 좁게 -->
-<div class="flex justify-end mt-6”>
-    <div class="flex items-center gap-1">
- <button
-  id="muteBtn"
-  class="w-2 h-2 rounded-full bg-yellow-400/40"
-></button>
-    </div>
-  </div>
-
-  <div id="stationText" class="mt-1 text-left"></div>
-  <div id="nowProgram"></div>
 </div>
+
 
 
 
