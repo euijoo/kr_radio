@@ -3,23 +3,28 @@
 <head>
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json">
-
-  <!-- 상태바 / PWA 색: 실제 배경과 맞추기 -->
-  <meta name="theme-color" content="#020617">
-
-  <!-- iOS 홈 화면 웹앱 모드 (한 번만) -->
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#000000">
+<!-- iOS 홈 화면 웹앱 모드 -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  
 
   <meta charset="UTF-8">
-  <meta
-    name="viewport"
-    content="width=device-width,
-             initial-scale=1,
-             maximum-scale=1,
-             user-scalable=no,
-             viewport-fit=cover">
-  ...
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <!-- 외부 CSS -->
+  <link rel="stylesheet" href="style.css">
+  <!-- iOS 홈 화면 아이콘 -->
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/ejf-180.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+
+  <title>EJF Radio</title>
+
+  <!-- Tailwind (개발용 CDN) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- 외부 CSS -->
+  <link rel="stylesheet" href="style.css">
 </head>
 
 <body class="bg-neutral-900 text-white max-w-md mx-auto">
