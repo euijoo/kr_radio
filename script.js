@@ -923,7 +923,7 @@ channels.forEach((g, index) => {
     channelList.innerHTML = '';
     g.list.forEach(ch => {
       const d = document.createElement('div');
-      d.className = "channel-item flex justify-between bg-neutral-800 rounded-lg p-3 mb-2 cursor-pointer";
+      d.className = "channel-item flex justify-between bg-neutral-900 rounded-lg p-3 mb-2 cursor-pointer";
       d.innerHTML = `<span>${ch.name}</span><span class="text-xs text-gray-400">${ch.freq.toFixed(1)}</span>`;
       d.onclick = async () => {
         console.log('채널 직접 선택:', ch.name);
