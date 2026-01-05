@@ -5,6 +5,7 @@
   margin-top: 24px;
   gap: 35px;
 }
+
 .tab {
   cursor: pointer;
   font-weight: 400;
@@ -19,6 +20,7 @@
   transition: all 0.3s ease;
   border-bottom: none !important;
 }
+
 .tab-button {
   width: 45px;
   height: 45px;
@@ -28,9 +30,11 @@
   transition: all 0.3s ease;
   position: relative;
 }
+
 .tab.active {
   border-bottom: none;
 }
+
 .tab-label {
   font-size: 11px;
   font-weight: 300;
@@ -38,13 +42,18 @@
   order: -1;
   transition: color 0.3s ease;
 }
+
 .tab.active .tab-label {
   font-weight: 500;
 }
+
+/* 각 방송국별 색상 */
 .tab-button.sbs { background: #e89a3c; }
 .tab-button.mbc { background: #e66841; }
 .tab-button.kbs { background: #a94442; }
 .tab-button.etc { background: #8b9456; }
+
+/* 선택 시 텍스트 색상 변경 */
 .tab.active .tab-button.sbs ~ .tab-label { color: #e89a3c; }
 .tab.active .tab-button.mbc ~ .tab-label { color: #e66841; }
 .tab.active .tab-button.kbs ~ .tab-label { color: #a94442; }
@@ -58,6 +67,7 @@ body {
   -webkit-touch-callout: none;
   touch-action: pan-y;
 }
+
 * {
   user-select: none;
   -webkit-user-select: none;
@@ -69,6 +79,7 @@ body {
   height: var(--dial-height);
   position: relative;
 }
+
 .scale {
   position: absolute;
   bottom: 15px;
@@ -80,12 +91,14 @@ body {
   align-items: flex-end;
   padding: 0 30px;
 }
+
 .tick {
   display: flex;
   flex-direction: column;
   align-items: center;
   position: relative;
 }
+
 .tick.major .tick-mark {
   width: 1.6px;
   height: 24px;
@@ -93,18 +106,21 @@ body {
   margin-bottom: 6px;
   box-shadow: 0 0 4px #00d9ff;
 }
+
 .tick.major .tick-label {
   font-size: 11px;
   font-weight: 500;
   color: #00d9ff;
   text-shadow: 0 0 6px rgba(0,217,255,0.6);
 }
+
 .tick.medium .tick-mark {
   width: 1.5px;
   height: 27px;
   background: #00b8dd;
   margin-bottom: 6px;
 }
+
 .tick.minor .tick-mark {
   width: 1px;
   height: 20px;
@@ -125,22 +141,26 @@ body {
   padding: 0 30px;
   opacity: 0.5;
 }
+
 .am-tick {
   display: flex;
   flex-direction: column;
   align-items: center;
 }
+
 .am-tick-label {
   font-size: 9px;
   color: #00d9ff;
   margin-bottom: 4px;
   text-shadow: 0 0 4px rgba(0,217,255,0.4);
 }
+
 .am-tick-mark {
   width: 1px;
   height: 10px;
   background: #00d9ff;
 }
+
 .am-tick.major .am-tick-mark {
   height: 14px;
   width: 1.5px;
@@ -154,18 +174,25 @@ body {
   background: linear-gradient(to bottom, #ff3333, #cc0000);
   box-shadow: 0 0 12px rgba(255,51,51,0.9);
   z-index: 10;
+  /* transition 제거해서 손가락에 더 붙게 */
+  /* transition: left .06s ease-out; */
 }
 
-#dialInfo { padding: 10px 12px 0; }
+#dialInfo {
+  padding: 10px 12px 0;
+}
+
 #freqText {
   font-size: 32px;
   font-weight: 600;
 }
+
 #stationText {
   font-size: 13px;
   color: #9ca3af;
   margin-top: 4px;
 }
+
 #nowProgram {
   font-size: 12px;
   color: #d1d5db;
@@ -173,7 +200,11 @@ body {
   min-height: 18px;
   line-height: 18px;
 }
-#stereoLamp { margin-bottom: 10px; }
+
+#stereoLamp {
+  margin-bottom: 10px;
+}
+
 .stereo {
   width: 8px;
   height: 8px;
@@ -183,7 +214,11 @@ body {
   opacity: 0;
   transition: .3s;
 }
-.stereo.on { opacity: 1; }
+
+.stereo.on {
+  opacity: 1;
+}
+
 .power-on {
   background: #154efa !important;
   box-shadow: 0 0 12px #154efa;
@@ -196,15 +231,18 @@ body {
   transform: translateY(-6px);
   transition: height .45s, opacity .3s, transform .45s;
 }
+
 #channelList.open {
   opacity: 1;
   transform: translateY(0);
 }
+
 .channel-item {
   opacity: 0;
   transform: translateY(6px);
   transition: .35s;
 }
+
 #channelList.open .channel-item {
   opacity: 1;
   transform: translateY(0);
@@ -216,6 +254,7 @@ body {
   user-select: none;
 }
 
+/* 뮤트 버튼 전환 애니메이션 */
 #muteBtn {
   transition:
     box-shadow 0.2s ease,
