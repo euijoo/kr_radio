@@ -233,16 +233,46 @@ const channels = [
     ]
   },
   {
-    group: 'E T C',
-    list: [
-      {name: 'EBS FM', freq: 104.5, url: 'https://radio.bsod.kr/stream/?stn=ebs'},
-      {name: 'TBS FM', freq: 95.1, url: 'https://radio.bsod.kr/stream/?stn=tbs&ch=fm'},
-      {name: 'TBS eFM', freq: 101.3, url: 'https://radio.bsod.kr/stream/?stn=tbs&ch=efm'},
-      {name: 'CBS 표준FM', freq: 98.1, url: 'https://radio.bsod.kr/stream/?stn=cbs&ch=sfm'},
-      {name: 'CBS 음악FM', freq: 93.9, url: 'https://radio.bsod.kr/stream/?stn=cbs&ch=mfm'},
-      {name: 'CBS JOY4U', freq: 90.1, url: 'https://radio.bsod.kr/stream/?stn=cbs&ch=joy4u'}
-    ]
-  }
+  group: 'E T C',
+  list: [
+    {
+      name: 'EBS FM',
+      freq: 104.5,
+      url: 'https://radio.bsod.kr/stream/?stn=ebs',
+      json: 'schedule/ebs-fm.json'
+    },
+    {
+      name: 'TBS FM',
+      freq: 95.1,
+      url: 'https://radio.bsod.kr/stream/?stn=tbs&ch=fm'
+      // json 아직 없으면 생략
+    },
+    {
+      name: 'TBS eFM',
+      freq: 101.3,
+      url: 'https://radio.bsod.kr/stream/?stn=tbs&ch=efm'
+      // json 아직 없으면 생략
+    },
+    {
+      name: 'CBS 표준FM',
+      freq: 98.1,
+      url: 'https://radio.bsod.kr/stream/?stn=cbs&ch=sfm',
+      json: 'schedule/cbs-standardfm.json'
+    },
+    {
+      name: 'CBS 음악FM',
+      freq: 93.9,
+      url: 'https://radio.bsod.kr/stream/?stn=cbs&ch=mfm',
+      json: 'schedule/cbs-musicfm.json'
+    },
+    {
+      name: 'CBS JOY4U',
+      freq: 90.1,
+      url: 'https://radio.bsod.kr/stream/?stn=cbs&ch=joy4u',
+      json: 'schedule/cbs-joy4u.json'
+    }
+  ]
+}
 ];
 
 // ========================================
