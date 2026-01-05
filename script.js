@@ -245,13 +245,11 @@ const channels = [
       name: 'TBS FM',
       freq: 95.1,
       url: 'https://radio.bsod.kr/stream/?stn=tbs&ch=fm'
-      // json 아직 없으면 생략
     },
     {
       name: 'TBS eFM',
       freq: 101.3,
       url: 'https://radio.bsod.kr/stream/?stn=tbs&ch=efm'
-      // json 아직 없으면 생략
     },
     {
       name: 'CBS 표준FM',
