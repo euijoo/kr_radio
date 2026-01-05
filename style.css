@@ -1,264 +1,224 @@
-html,
-body {
-overflow-x: hidden;
-}
-height: 100%;
-margin: 0;
-}
-
-body {
-background: #020617;
-color: #e5e7eb;
-font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-sans-serif;
-}
-
-/* 최상위 .app도 배경을 어둡게 */
-.app {
-min-height: 100vh;
-background: #020617;
-}
-
-
-/* 미니 플레이어 */
-.mini-player {
-position: fixed;
-bottom: 0;
-left: 0;
-right: 0;
-padding: 8px 12px;
-background: #020617;
-border-top: 1px solid #111827;
-display: flex;
-align-items: center;
-justify-content: space-between;
-gap: 10px;
-}
-
-/* 왼쪽 영역 */
-.mini-left {
-display: flex;
-align-items: center;
-gap: 10px;
-flex: 1;
-min-width: 0;
-}
-
-/* 커버 이미지 */
-.mini-cover {
-width: 40px;
-height: 40px;
-border-radius: 6px;
-object-fit: cover;
-}
-
-/* 텍스트 박스 */
-.mini-text {
-display: flex;
-flex-direction: column;
-min-width: 0;
-}
-
-.mini-title {
-font-size: 13px;
-color: #e5e7eb;
-white-space: nowrap;
-overflow: hidden;
-text-overflow: ellipsis;
-}
-
-.mini-artist {
-font-size: 11px;
-color: #9ca3af;
-white-space: nowrap;
-overflow: hidden;
-text-overflow: ellipsis;
-}
-
-/* 오른쪽 버튼 영역 */
-.mini-right {
-display: flex;
-align-items: center;
-justify-content: flex-end;
-}
-
-/* 미니 플레이어 버튼 (id로 스타일링) */
-#miniPlayPauseBtn {
-width: 40px;
-height: 40px;
-border-radius: 999px;
-border: none;
-background: #10b981;
-color: #020617;
-display: flex;
-align-items: center;
-justify-content: center;
-cursor: pointer;
-font-size: 18px;
-}
-/* 트랙 리스트 */
-#trackList {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-/* 각 아이템 */
-.track-item {
+#tabs {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
-  gap: 10px;
-  background: #020617;
-  border-bottom: 1px solid #111827;
+  justify-content: space-around;
+  padding: 0 24px;
+  margin-top: 24px;
+  gap: 35px;
 }
-
-/* 현재 재생 중인 아이템 강조 */
-.track-item.active {
-  background: #111827;
-}
-
-/* 썸네일 */
-.track-item-thumb {
-  width: 40px;
-  height: 40px;
-  border-radius: 6px;
-  object-fit: cover;
-}
-
-/* 텍스트 영역 */
-.track-item-text {
+.tab {
+  cursor: pointer;
+  font-weight: 400;
+  font-size: 10px;
+  color: #666;
+  padding-bottom: 4px;
   display: flex;
   flex-direction: column;
-  flex: 1;
-  min-width: 0;
-}
-
-.track-item-title {
-  font-size: 14px;
-  color: #e5e7eb;
-  margin-bottom: 2px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.track-item-artist {
-  font-size: 12px;
-  color: #9ca3af;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* 오른쪽 삭제 버튼 래퍼 */
-.track-item-meta {
-  display: flex;
   align-items: center;
-  justify-content: flex-end;
+  gap: 30px;
+  position: relative;
+  transition: all 0.3s ease;
+  border-bottom: none !important;
 }
-
-/* 삭제 버튼 */
-.delete-btn {
+.tab-button {
+  width: 45px;
+  height: 45px;
+  border-radius: 90%;
   border: none;
-  padding: 4px 10px;
-  border-radius: 999px;
+  box-shadow: none;
+  transition: all 0.3s ease;
+  position: relative;
+}
+.tab.active {
+  border-bottom: none;
+}
+.tab-label {
   font-size: 11px;
-  background: #ef4444;
-  color: #f9fafb;
-  cursor: pointer;
+  font-weight: 300;
+  letter-spacing: 0.5px;
+  order: -1;
+  transition: color 0.3s ease;
+}
+.tab.active .tab-label {
+  font-weight: 500;
+}
+.tab-button.sbs { background: #e89a3c; }
+.tab-button.mbc { background: #e66841; }
+.tab-button.kbs { background: #a94442; }
+.tab-button.etc { background: #8b9456; }
+.tab.active .tab-button.sbs ~ .tab-label { color: #e89a3c; }
+.tab.active .tab-button.mbc ~ .tab-label { color: #e66841; }
+.tab.active .tab-button.kbs ~ .tab-label { color: #a94442; }
+.tab.active .tab-button.etc ~ .tab-label { color: #8b9456; }
+
+body {
+  overflow: hidden;
+  overscroll-behavior: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: pan-y;
+}
+* {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
-.delete-btn:active {
-  background: #b91c1c;
+#dial {
+  --dial-height: 180px;
+  height: var(--dial-height);
+  position: relative;
 }
-/* 트랙 리스트 */
-#trackList {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-/* 각 아이템 */
-.track-item {
+.scale {
+  position: absolute;
+  bottom: 15px;
+  left: 0;
+  right: 0;
+  height: 80px;
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
-  gap: 10px;
-  background: #020617;
-  border-bottom: 1px solid #111827;
+  align-items: flex-end;
+  padding: 0 30px;
 }
-
-/* 현재 재생 중인 아이템 강조 */
-.track-item.active {
-  background: #111827;
-}
-
-/* 썸네일 */
-.track-item-thumb {
-  width: 40px;
-  height: 40px;
-  border-radius: 6px;
-  object-fit: cover;
-}
-
-/* 텍스트 영역 */
-.track-item-text {
+.tick {
   display: flex;
   flex-direction: column;
-  flex: 1;
-  min-width: 0;
-}
-
-.track-item-title {
-  font-size: 14px;
-  color: #e5e7eb;
-  margin-bottom: 2px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.track-item-artist {
-  font-size: 12px;
-  color: #9ca3af;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* 오른쪽 삭제 버튼 래퍼 */
-.track-item-meta {
-  display: flex;
   align-items: center;
-  justify-content: flex-end;
+  position: relative;
 }
-
-/* 삭제 버튼 */
-.delete-btn {
-  border: none;
-  padding: 4px 10px;
-  border-radius: 999px;
+.tick.major .tick-mark {
+  width: 1.6px;
+  height: 24px;
+  background: #00d9ff;
+  margin-bottom: 6px;
+  box-shadow: 0 0 4px #00d9ff;
+}
+.tick.major .tick-label {
   font-size: 11px;
-  background: #ef4444;
-  color: #f9fafb;
-  cursor: pointer;
+  font-weight: 500;
+  color: #00d9ff;
+  text-shadow: 0 0 6px rgba(0,217,255,0.6);
+}
+.tick.medium .tick-mark {
+  width: 1.5px;
+  height: 27px;
+  background: #00b8dd;
+  margin-bottom: 6px;
+}
+.tick.minor .tick-mark {
+  width: 1px;
+  height: 20px;
+  background: #008ba8;
+  margin-bottom: 6px;
+  opacity: 0.7;
 }
 
-.delete-btn:active {
-  background: #b91c1c;
+.am-scale {
+  position: absolute;
+  top: 15px;
+  left: 0;
+  right: 0;
+  height: 50px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 0 30px;
+  opacity: 0.5;
 }
-/* 유튜브 iframe을 완전히 숨기기 (모든 브라우저) */
-.player-container {
-  display: none !important;
+.am-tick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.am-tick-label {
+  font-size: 9px;
+  color: #00d9ff;
+  margin-bottom: 4px;
+  text-shadow: 0 0 4px rgba(0,217,255,0.4);
+}
+.am-tick-mark {
+  width: 1px;
+  height: 10px;
+  background: #00d9ff;
+}
+.am-tick.major .am-tick-mark {
+  height: 14px;
+  width: 1.5px;
 }
 
-#player,
-.player-frame {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
+#needle {
+  position: absolute;
+  top: -12px;
+  width: 3px;
+  height: calc(var(--dial-height) + 24px);
+  background: linear-gradient(to bottom, #ff3333, #cc0000);
+  box-shadow: 0 0 12px rgba(255,51,51,0.9);
+  z-index: 10;
 }
 
+#dialInfo { padding: 10px 12px 0; }
+#freqText {
+  font-size: 32px;
+  font-weight: 600;
+}
+#stationText {
+  font-size: 13px;
+  color: #9ca3af;
+  margin-top: 4px;
+}
+#nowProgram {
+  font-size: 12px;
+  color: #d1d5db;
+  margin-top: 2px;
+  min-height: 18px;
+  line-height: 18px;
+}
+#stereoLamp { margin-bottom: 10px; }
+.stereo {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #0f0;
+  box-shadow: 0 0 10px #0f0;
+  opacity: 0;
+  transition: .3s;
+}
+.stereo.on { opacity: 1; }
+.power-on {
+  background: #154efa !important;
+  box-shadow: 0 0 12px #154efa;
+}
+
+#channelList {
+  overflow: hidden;
+  height: 0;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: height .45s, opacity .3s, transform .45s;
+}
+#channelList.open {
+  opacity: 1;
+  transform: translateY(0);
+}
+.channel-item {
+  opacity: 0;
+  transform: translateY(6px);
+  transition: .35s;
+}
+#channelList.open .channel-item {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+#freqRange {
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+#muteBtn {
+  transition:
+    box-shadow 0.2s ease,
+    border-color 0.2s ease,
+    background-color 0.2s ease;
+}
