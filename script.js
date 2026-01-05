@@ -1,615 +1,175 @@
-// ===== Firebase SDK import & 초기화 =====
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-import {
-  getAuth,
-  GoogleAuthProvider,
-  signInWithPopup,
-  signOut,
-  onAuthStateChanged,
-} from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
-import {
-  getFirestore,
-  collection,
-  addDoc,
-  getDocs,
-  deleteDoc,
-  doc,
-} from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
-
-// Firebase 설정
-const firebaseConfig = {
-  apiKey: "AIzaSyA-wThpRQqn1XaB8sIBO4J4Mq_kOQyTy04",
-  authDomain: "ejtube-7a3b9.firebaseapp.com",
-  projectId: "ejtube-7a3b9",
-  storageBucket: "ejtube-7a3b9.firebasestorage.app",
-  messagingSenderId: "1065039235604",
-  appId: "1:1065039235604:web:ebd9ca5f3653df841a7501",
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const provider = new GoogleAuthProvider();
-const db = getFirestore(app);
-
-// ===== 설정 =====
-
-// YouTube Data API 키
-const API_KEY = "AIzaSyBysIkRsY2eIwHAqv2oSA8uh6XLiBvXtQ4";
-
-// Firestore 컬렉션 경로: users/{uid}/tracks
-let currentUser = null;
-
-// ===== 전역 상태 =====
-
-let player = null;
-let tracks = []; // { id, videoId, title, channel, thumbnail, addedAt }
-let currentTrackId = null;
-
-// ===== DOM 참조 =====
-const miniPlayPauseBtn = document.getElementById("miniPlayPauseBtn");
-
-// 로그인 화면
-const loginScreen = document.getElementById("login-screen");
-const googleLoginButton = document.getElementById("googleLoginButton");
-const loginError = document.getElementById("loginError");
-
-// 메인 화면
-const mainScreen = document.getElementById("main-screen");
-const logoutButton = document.getElementById("logoutButton");
-const userEmailEl = document.getElementById("userEmail");
-
-const addButton = document.getElementById("addButton");
-const videoUrlInput = document.getElementById("videoUrl");
-const clearListButton = document.getElementById("clearListButton");
-const trackListEl = document.getElementById("trackList");
-
-const titleEl = document.getElementById("title");
-const artistEl = document.getElementById("artist");
-const thumbnailEl = document.getElementById("thumbnail");
-
-// ===== 유틸: videoId 추출 =====
-
-function extractVideoId(url) {
-  try {
-    const u = new URL(url);
-    if (u.hostname.includes("youtu.be")) {
-      return u.pathname.slice(1);
-    }
-    if (u.searchParams.get("v")) {
-      return u.searchParams.get("v");
-    }
-    const paths = u.pathname.split("/");
-    return paths.pop() || paths.pop();
-  } catch (e) {
-    return null;
-  }
-}
-
-// ===== Data API: 영상 정보 가져오기 =====
-
-async function fetchVideoInfo(videoId) {
-  const endpoint = "https://www.googleapis.com/youtube/v3/videos";
-  const params = new URLSearchParams({
-    key: API_KEY,
-    part: "snippet",
-    id: videoId,
-  });
-
-  const res = await fetch(`${endpoint}?${params.toString()}`);
-  if (!res.ok) throw new Error("YouTube Data API 오류");
-  const data = await res.json();
-
-  if (!data.items || data.items.length === 0) {
-    throw new Error("영상 정보를 찾을 수 없음");
-  }
-
-  const snippet = data.items[0].snippet;
-  const thumbs = snippet.thumbnails || {};
-
-  const bestThumb =
-    thumbs.maxres?.url ||
-    thumbs.standard?.url ||
-    thumbs.high?.url ||
-    thumbs.medium?.url ||
-    thumbs.default?.url;
-
-  return {
-    title: snippet.title,
-    channel: snippet.channelTitle,
-    thumbnail: bestThumb,
-  };
-}
-
-// ===== 미니 플레이어 아이콘 동기화 함수 =====
-
-function updateMiniButtonByPlayerState() {
-  if (!player || !miniPlayPauseBtn) return;
-
-  const state = player.getPlayerState();
-  if (state === YT.PlayerState.PLAYING) {
-    miniPlayPauseBtn.textContent = "⏸";
-  } else {
-    miniPlayPauseBtn.textContent = "▶";
-  }
-}
-
-// ===== YouTube Iframe API 콜백 =====
-
-function onYouTubeIframeAPIReady() {
-  // 최초에는 아무것도 하지 않음 (playVideoById에서 player 생성)
-}
-window.onYouTubeIframeAPIReady = onYouTubeIframeAPIReady;
-
-// 플레이어 준비됐을 때: 미니 버튼 아이콘 초기화 + Media Session 메타 설정
-function onPlayerReady() {
-  miniPlayPauseBtn.textContent = "▶";
-
-  if ("mediaSession" in navigator) {
-    navigator.mediaSession.playbackState = "none";
-  }
-}
-
-// 재생 상태 변경 (다음 곡 자동재생 + MediaSession/아이콘 동기화)
-function onPlayerStateChange(event) {
-  const state = event.data;
-
-  // 미니 플레이어 아이콘을 현재 상태에 맞게 갱신
-  updateMiniButtonByPlayerState();
-
-  // Media Session API 쪽 재생 상태 동기화
-  if ("mediaSession" in navigator) {
-    if (state === YT.PlayerState.PLAYING) {
-      navigator.mediaSession.playbackState = "playing";
-    } else if (state === YT.PlayerState.PAUSED) {
-      navigator.mediaSession.playbackState = "paused";
-    } else if (state === YT.PlayerState.ENDED) {
-      navigator.mediaSession.playbackState = "none";
-    }
-  }
-
-  // === 다음 곡 자동재생 기존 로직 ===
-  if (state === YT.PlayerState.ENDED) {
-    if (!currentTrackId || tracks.length === 0) return;
-
-    const currentIndex = tracks.findIndex((t) => t.id === currentTrackId);
-    if (currentIndex === -1) return;
-
-    const nextIndex = currentIndex + 1;
-    if (nextIndex >= tracks.length) {
-      // 마지막 곡이면 멈춤 (원하면 여기서 첫 곡으로 루프 가능)
-      return;
-    }
-
-    const nextTrack = tracks[nextIndex];
-    playTrack(nextTrack.id);
-  }
-}
-
-// ===== Firestore: 유저별 tracks 컬렉션 참조 =====
-
-function getTracksCollectionRef(uid) {
-  return collection(db, "users", uid, "tracks");
-}
-
-async function loadTracksFromFirestore() {
-  if (!currentUser) return;
-
-  const colRef = getTracksCollectionRef(currentUser.uid);
-  const snap = await getDocs(colRef);
-  const list = [];
-  snap.forEach((docSnap) => {
-    const data = docSnap.data();
-    list.push({
-      id: docSnap.id,
-      videoId: data.videoId,
-      title: data.title,
-      channel: data.channel,
-      thumbnail: data.thumbnail,
-      addedAt: data.addedAt,
-    });
-  });
-
-  tracks = list.sort((a, b) => b.addedAt - a.addedAt);
-}
-
-async function addTrackToFirestore(track) {
-  if (!currentUser) return;
-  const colRef = getTracksCollectionRef(currentUser.uid);
-  const docRef = await addDoc(colRef, track);
-  return docRef.id;
-}
-
-async function deleteTrackFromFirestore(id) {
-  if (!currentUser) return;
-  const docRef = doc(db, "users", currentUser.uid, "tracks", id);
-  await deleteDoc(docRef);
-}
-
-async function clearTracksInFirestore() {
-  if (!currentUser) return;
-  const colRef = getTracksCollectionRef(currentUser.uid);
-  const snap = await getDocs(colRef);
-  const promises = [];
-  snap.forEach((docSnap) => {
-    promises.push(
-      deleteDoc(doc(db, "users", currentUser.uid, "tracks", docSnap.id))
-    );
-  });
-  await Promise.all(promises);
-}
-
-// ===== UI 렌더링 =====
-
-function renderTrackList() {
-  trackListEl.innerHTML = "";
-
-  if (tracks.length === 0) {
-    const empty = document.createElement("li");
-    empty.textContent = "아직 추가된 영상이 없습니다.";
-    empty.style.fontSize = "13px";
-    empty.style.color = "#9ca3af";
-    trackListEl.appendChild(empty);
-    return;
-  }
-
-  tracks.forEach((track) => {
-    const li = document.createElement("li");
-    li.className = "track-item";
-    li.dataset.trackId = track.id;
-
-    if (track.id === currentTrackId) {
-      li.classList.add("active");
-    }
-
-    const img = document.createElement("img");
-    img.className = "track-item-thumb";
-    img.src = track.thumbnail;
-    img.alt = track.title;
-
-    const textBox = document.createElement("div");
-    textBox.className = "track-item-text";
-
-    const titleDiv = document.createElement("div");
-    titleDiv.className = "track-item-title";
-    titleDiv.textContent = track.title;
-
-    const artistDiv = document.createElement("div");
-    artistDiv.className = "track-item-artist";
-    artistDiv.textContent = track.channel;
-
-    textBox.appendChild(titleDiv);
-    textBox.appendChild(artistDiv);
-
-    const metaDiv = document.createElement("div");
-    metaDiv.className = "track-item-meta";
-
-    const delBtn = document.createElement("button");
-    delBtn.className = "delete-btn";
-    delBtn.textContent = "삭제";
-
-    metaDiv.appendChild(delBtn);
-
-    li.appendChild(img);
-    li.appendChild(textBox);
-    li.appendChild(metaDiv);
-
-    li.addEventListener("click", (e) => {
-      if (e.target === delBtn) return;
-      playTrack(track.id);
-    });
-
-    delBtn.addEventListener("click", async (e) => {
-      e.stopPropagation();
-      await deleteTrack(track.id);
-    });
-
-    trackListEl.appendChild(li);
-  });
-}
-
-function updateNowPlaying(track) {
-  titleEl.textContent = track.title;
-  artistEl.textContent = track.channel;
-  thumbnailEl.src = track.thumbnail;
-
-  const miniThumb = document.getElementById("miniThumb");
-  const miniTitle = document.getElementById("miniTitle");
-  const miniArtist = document.getElementById("miniArtist");
-  if (miniThumb && miniTitle && miniArtist) {
-    miniThumb.src = track.thumbnail;
-    miniTitle.textContent = track.title;
-    miniArtist.textContent = track.channel;
-  }
-
-  // Media Session 메타데이터도 같이 갱신
-  if ("mediaSession" in navigator) {
-    navigator.mediaSession.metadata = new MediaMetadata({
-      title: track.title,
-      artist: track.channel,
-      artwork: [
-        { src: track.thumbnail, sizes: "96x96", type: "image/jpeg" },
-        { src: track.thumbnail, sizes: "256x256", type: "image/jpeg" },
-      ],
-    });
-  }
-}
-
-// ===== 트랙 추가/삭제/재생 =====
-
-async function addTrackFromUrl(url) {
-  if (!currentUser) {
-    alert("먼저 Google 계정으로 로그인해 주세요.");
-    return;
-  }
-
-  const videoId = extractVideoId(url);
-  if (!videoId) {
-    alert("유효한 YouTube 주소가 아닌 것 같아요.");
-    return;
-  }
-
-  try {
-    const info = await fetchVideoInfo(videoId);
-
-    const newTrackData = {
-      videoId,
-      title: info.title,
-      channel: info.channel,
-      thumbnail: info.thumbnail,
-      addedAt: Date.now(),
-    };
-
-    const docId = await addTrackToFirestore(newTrackData);
-
-    const newTrack = {
-      id: docId,
-      ...newTrackData,
-    };
-
-    tracks.unshift(newTrack);
-    currentTrackId = newTrack.id;
-    updateNowPlaying(newTrack);
-    renderTrackList();
-    playVideoById(videoId);
-  } catch (err) {
-    console.error(err);
-    alert("영상 정보를 불러오는 중 문제가 발생했어요.");
-  }
-}
-
-async function deleteTrack(id) {
-  await deleteTrackFromFirestore(id);
-
-  const index = tracks.findIndex((t) => t.id === id);
-  if (index === -1) return;
-
-  tracks.splice(index, 1);
-
-  if (currentTrackId === id) {
-    currentTrackId = tracks[0]?.id || null;
-    if (currentTrackId) {
-      updateNowPlaying(tracks[0]);
-      playVideoById(tracks[0].videoId);
-    }
-  }
-
-  renderTrackList();
-}
-
-function playTrack(id) {
-  const track = tracks.find((t) => t.id === id);
-  if (!track) return;
-
-  currentTrackId = id;
-  updateNowPlaying(track);
-  playVideoById(track.videoId);
-  renderTrackList();
-}
-
-function playVideoById(videoId) {
-  if (!player) {
-    player = new YT.Player("player", {
-      width: "640",
-      height: "360",
-      videoId,
-      playerVars: {
-        rel: 0,
-        playsinline: 1,
-      },
-      events: {
-        onReady: onPlayerReady,
-        onStateChange: onPlayerStateChange,
-      },
-    });
-
-    // Media Session API 액션 핸들러 등록 (블루투스/시스템 재생 제어)
-        if ("mediaSession" in navigator) {
-      navigator.mediaSession.setActionHandler("play", () => {
-        if (!player) return;
-        player.playVideo();
-        updateMiniButtonByPlayerState();
-      });
-
-      navigator.mediaSession.setActionHandler("pause", () => {
-        if (!player) return;
-        player.pauseVideo();
-        updateMiniButtonByPlayerState();
-      });
-
-      navigator.mediaSession.setActionHandler("nexttrack", () => {
-        if (!currentTrackId || tracks.length === 0) return;
-        const currentIndex = tracks.findIndex((t) => t.id === currentTrackId);
-        if (currentIndex === -1) return;
-        const nextIndex = currentIndex + 1;
-        if (nextIndex >= tracks.length) return;
-        const nextTrack = tracks[nextIndex];
-        playTrack(nextTrack.id);
-      });
-
-      navigator.mediaSession.setActionHandler("previoustrack", () => {
-        if (!currentTrackId || tracks.length === 0) return;
-        const currentIndex = tracks.findIndex((t) => t.id === currentTrackId);
-        if (currentIndex === -1) return;
-        const prevIndex = currentIndex - 1;
-        if (prevIndex < 0) return;
-        const prevTrack = tracks[prevIndex];
-        playTrack(prevTrack.id);
-      });
-    }
-
-  } else {
-    player.loadVideoById(videoId);
-  }
-}
-
-// ===== Google 로그인/로그아웃 =====
-
-googleLoginButton.addEventListener("click", async () => {
-  try {
-    loginError.textContent = "";
-    await signInWithPopup(auth, provider);
-  } catch (err) {
-    console.error("login error:", err.code, err.message);
-    if (err.code === "auth/popup-blocked" || err.code === "auth/popup-closed-by-user") {
-      loginError.textContent =
-        "팝업이 차단되었어요. 브라우저 팝업/쿠키 설정을 확인해 주세요.";
-    } else {
-      loginError.textContent =
-        `로그인 오류 (${err.code}) 잠시 후 다시 시도해 주세요.`;
-    }
-  }
-});
-
-logoutButton.addEventListener("click", async () => {
-  try {
-    await signOut(auth);
-  } catch (err) {
-    console.error(err);
-    alert("로그아웃 중 문제가 발생했어요.");
-  }
-});
-
-// 로그인 상태 감시
-onAuthStateChanged(auth, async (user) => {
-  console.log("auth state changed:", user);
-  if (user) {
-    currentUser = user;
-    userEmailEl.textContent = user.email || "";
-
-    loginScreen.style.display = "none";
-    mainScreen.classList.remove("hidden");
-
-    await loadTracksFromFirestore();
-    renderTrackList();
-
-    if (tracks.length > 0) {
-      const first = tracks[0];
-      currentTrackId = first.id;
-      updateNowPlaying(first);
-    } else {
-      titleEl.textContent = "제목";
-      artistEl.textContent = "아티스트";
-      thumbnailEl.removeAttribute("src");
-    }
-  } else {
-    currentUser = null;
-    tracks = [];
-    currentTrackId = null;
-
-    loginScreen.style.display = "flex";
-    mainScreen.classList.add("hidden");
-    loginError.textContent = "";
-  }
-});
-
-// ===== 이벤트 바인딩 =====
-
-addButton.addEventListener("click", () => {
-  const url = videoUrlInput.value.trim();
-  if (!url) return;
-  addTrackFromUrl(url);
-  videoUrlInput.value = "";
-});
-
-videoUrlInput.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") {
-    addButton.click();
-  }
-});
-
-clearListButton.addEventListener("click", async () => {
-  if (!currentUser) {
-    alert("먼저 Google 계정으로 로그인해 주세요.");
-    return;
-  }
-  if (!confirm("정말 전체 리스트를 비울까요?")) return;
-
-  await clearTracksInFirestore();
-  tracks = [];
-  currentTrackId = null;
-  renderTrackList();
-  titleEl.textContent = "제목";
-  artistEl.textContent = "아티스트";
-  thumbnailEl.removeAttribute("src");
-});
-
-// ===== 미니 플레이어 재생/일시정지 버튼 =====
-
-console.log("miniPlayPauseBtn:", miniPlayPauseBtn);
-
-miniPlayPauseBtn.addEventListener("click", () => {
-  if (!player) return;
-
-  const state = player.getPlayerState();
-
-  if (state === YT.PlayerState.PLAYING) {
-    player.pauseVideo();
-  } else {
-    player.playVideo();
-  }
-
-  updateMiniButtonByPlayerState();
-});
-
-document.addEventListener('gesturestart', function (e) {
-  e.preventDefault();
-});
-
-
-if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
-  // 두 손가락 이상 핀치 시작 막기
-  document.addEventListener(
-    'touchstart',
-    function (e) {
-      if (e.touches.length > 1) {
-        e.preventDefault();
+let scanAudios = [];
+let scanInterval = null;
+let lastTunedFreq = null;
+let originalVolume = 1;
+let isDirectTuning = false;
+let isScanningActive = false;
+let audioContext = null;
+
+function startScan(currentFreq) {
+  if (isDirectTuning || isChanging) return;
+  isScanningActive = true;
+
+  if (lastTunedFreq && Math.abs(currentFreq - lastTunedFreq) >= 2 && !audio.paused) {
+    const fadeOutInterval = setInterval(() => {
+      if (audio.volume > 0.05) {
+        audio.volume = Math.max(0, audio.volume - 0.15);
+      } else {
+        audio.pause();
+        audio.volume = originalVolume;
+        clearInterval(fadeOutInterval);
       }
-    },
-    { passive: false }
-  );
+    }, 30);
+  }
 
-  // 핀치 중(scale 변화) 막기
-  document.addEventListener(
-    'touchmove',
-    function (e) {
-      if (e.scale && e.scale !== 1) {
-        e.preventDefault();
-      }
-    },
-    { passive: false }
-  );
+  stopScan();
 
-  // 더블탭 줌 막기
-  let lastTouchEnd = 0;
-  document.addEventListener(
-    'touchend',
-    function (e) {
-      const now = Date.now();
-      if (now - lastTouchEnd <= 300) {
-        e.preventDefault();
+  const flat = channels.flatMap(g => g.list);
+  const nearbyStations = flat.filter(ch => Math.abs(ch.freq - currentFreq) <= 2);
+  const isIOSDevice = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  if (isIOSDevice) {
+    const nearestStation = nearbyStations.reduce((a, b) =>
+      Math.abs(b.freq - currentFreq) < Math.abs(a.freq - currentFreq) ? b : a
+    , {freq: 0});
+    const distanceToNearest = Math.abs(nearestStation.freq - currentFreq);
+
+    if (distanceToNearest <= 1.5 && nearestStation.url) {
+      const tempAudio = new Audio(nearestStation.url);
+      const volume = Math.max(0, 1 - (distanceToNearest / 1.5));
+      tempAudio.volume = volume * 0.25;
+      tempAudio.play().catch(() => {});
+      scanAudios.push(tempAudio);
+    }
+    noiseGain.gain.value = Math.min(0.3, distanceToNearest * 0.12);
+  } else {
+    nearbyStations.forEach(station => {
+      const distance = Math.abs(station.freq - currentFreq);
+      const volume = Math.max(0, 1 - (distance / 2));
+      if (volume > 0.1) {
+        const tempAudio = new Audio(station.url);
+        tempAudio.volume = volume * 0.4;
+        tempAudio.play().catch(() => {});
+        scanAudios.push(tempAudio);
       }
-      lastTouchEnd = now;
-    },
-    { passive: false }
-  );
+    });
+
+    const nearestStation = nearbyStations.reduce((a, b) =>
+      Math.abs(b.freq - currentFreq) < Math.abs(a.freq - currentFreq) ? b : a
+    , {freq: 0});
+    const distanceToNearest = Math.abs(nearestStation.freq - currentFreq);
+    noiseGain.gain.value = Math.min(0.2, distanceToNearest * 0.08);
+  }
 }
+
+function stopScan() {
+  scanAudios.forEach((audio, index) => {
+    try {
+      audio.pause();
+      audio.currentTime = 0;
+      audio.src = '';
+      audio.load();
+    } catch (e) {}
+  });
+  scanAudios = [];
+  isScanningActive = false;
+  noiseGain.gain.value = 0;
+}
+
+const MIN = 87.5, MAX = 108;
+const audio = new Audio();
+const ctx = new (window.AudioContext || window.webkitAudioContext)();
+const noiseGain = ctx.createGain();
+noiseGain.gain.value = 0;
+
+let power = false;
+let activeGroup = null;
+let currentSchedule = null;
+let inputTimer = null;
+let isChanging = false;
+let lastTouchX = null;
+let isTouching = false;
+let lastTouchEnd = 0;
+
+let fadeTimer = null;
+let currentVolume = 1;
+let lastVolumeBeforeMute = 1;
+let isMuted = false;
+
+function clearFade() {
+  if (fadeTimer) {
+    clearInterval(fadeTimer);
+    fadeTimer = null;
+  }
+}
+function setVolumeInstant(volume) {
+  clearFade();
+  audio.volume = Math.max(0, Math.min(1, volume));
+}
+function fadeToVolume(targetVolume = originalVolume, duration = 800) {
+  clearFade();
+  targetVolume = Math.max(0, Math.min(1, targetVolume));
+  const startVolume = audio.volume;
+  const diff = targetVolume - startVolume;
+  if (diff === 0) return;
+  const steps = 20;
+  const stepTime = duration / steps;
+  let currentStep = 0;
+  fadeTimer = setInterval(() => {
+    currentStep++;
+    const ratio = currentStep / steps;
+    const v = startVolume + diff * ratio;
+    audio.volume = Math.max(0, Math.min(1, v));
+    if (currentStep >= steps || audio.paused) {
+      audio.volume = targetVolume;
+      clearFade();
+    }
+  }, stepTime);
+}
+function fadeIn(targetVolume = originalVolume, duration = 800) {
+  setVolumeInstant(0);
+  fadeToVolume(targetVolume, duration);
+}
+function fadeOut(duration = 500) {
+  fadeToVolume(0, duration);
+}
+
+const range = document.getElementById('freqRange');
+const needle = document.getElementById('needle');
+const freqText = document.getElementById('freqText');
+const stationText = document.getElementById('stationText');
+const nowProgram = document.getElementById('nowProgram');
+const stereo = document.getElementById('stereoLamp');
+const powerBtn = document.getElementById('powerBtn');
+const tabs = document.getElementById('tabs');
+const channelList = document.getElementById('channelList');
+const scale = document.getElementById('scale');
+const muteBtn = document.getElementById('muteBtn');
+
+function updateMuteUI() {
+  if (isMuted) {
+    muteBtn.classList.add('bg-red-500','shadow','shadow-red-500/80');
+    muteBtn.classList.remove('bg-yellow-400/40');
+  } else {
+    muteBtn.classList.remove('bg-red-500','shadow','shadow-red-500/80');
+    muteBtn.classList.add('bg-yellow-400/40');
+  }
+}
+muteBtn.addEventListener('click', () => {
+  if (!power) return;
+  if (!audio.src) return;
+
+  if (isMuted) {
+    isMuted = false;
+    audio.muted = false;
+    if (lastVolumeBeforeMute <= 0) lastVolumeBeforeMute = 1;
+    audio.volume = currentVolume * originalVolume * lastVolumeBeforeMute;
+  } else {
+    isMuted = true;
+    lastVolumeBeforeMute = audio.volume > 0 ? audio.volume / (originalVolume || 1) : currentVolume;
+    audio.muted = true;
+  }
+  updateMuteUI();
+});
+
+const chan
