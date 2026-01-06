@@ -225,11 +225,11 @@ const channels = [
   {
     group: 'K B S',
     list: [
-      {name: 'KBS 1라디오', freq: 97.3, url: 'https://radio.bsod.kr/stream/?stn=kbs&ch=1radio', json: 'schedule/kbs-1radio.json'},
-      {name: 'KBS 2라디오', freq: 106.1, url: 'https://radio.bsod.kr/stream/?stn=kbs&ch=2radio', json: 'schedule/kbs-happyfm.json'},
-      {name: 'KBS 3라디오', freq: 104.9, url: 'https://radio.bsod.kr/stream/?stn=kbs&ch=3radio', json: 'schedule/kbs-3radio.json'},
-      {name: 'KBS 1FM', freq: 93.1, url: 'https://radio.bsod.kr/stream/?stn=kbs&ch=1fm', json: 'schedule/kbs-classicfm.json'},
-      {name: 'KBS 2FM', freq: 89.1, url: 'https://radio.bsod.kr/stream/?stn=kbs&ch=2fm', json: 'schedule/kbs-coolfm.json'}
+      {name: 'KBS CoolFM', freq: 89.1, url: 'https://radio.bsod.kr/stream/?stn=kbs&ch=2fm', json: 'schedule/kbs-coolfm.json'}
+      {name: 'KBS HappyFM', freq: 106.1, url: 'https://radio.bsod.kr/stream/?stn=kbs&ch=2radio', json: 'schedule/kbs-happyfm.json'},
+      {name: 'KBS ClassicFM', freq: 93.1, url: 'https://radio.bsod.kr/stream/?stn=kbs&ch=1fm', json: 'schedule/kbs-classicfm.json'},
+      {name: 'KBS 1Radio', freq: 97.3, url: 'https://radio.bsod.kr/stream/?stn=kbs&ch=1radio', json: 'schedule/kbs-1radio.json'},
+      {name: 'KBS 3Radio', freq: 104.9, url: 'https://radio.bsod.kr/stream/?stn=kbs&ch=3radio', json: 'schedule/kbs-3radio.json'},
     ]
   },
   {
