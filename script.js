@@ -225,53 +225,26 @@ const channels = [
   {
     group: 'K B S',
     list: [
-      {name: 'KBS 1라디오', freq: 97.3, url: 'https://radio.bsod.kr/stream/?stn=kbs&ch=1radio', json: 'schedule/kbs-1radio.json'},
-      {name: 'KBS 2라디오', freq: 106.1, url: 'https://radio.bsod.kr/stream/?stn=kbs&ch=2radio', json: 'schedule/kbs-happyfm.json'},
-      {name: 'KBS 3라디오', freq: 104.9, url: 'https://radio.bsod.kr/stream/?stn=kbs&ch=3radio', json: 'schedule/kbs-3radio.json'},
-      {name: 'KBS 1FM', freq: 93.1, url: 'https://radio.bsod.kr/stream/?stn=kbs&ch=1fm', json: 'schedule/kbs-classicfm.json'},
-      {name: 'KBS 2FM', freq: 89.1, url: 'https://radio.bsod.kr/stream/?stn=kbs&ch=2fm', json: 'schedule/kbs-coolfm.json'}
+      {name: 'KBS CoolFM', freq: 89.1, url: 'https://radio.bsod.kr/stream/?stn=kbs&ch=2fm', json: 'schedule/kbs-coolfm.json'},     // ← 콤마 추가!
+      {name: 'KBS HappyFM', freq: 106.1, url: 'https://radio.bsod.kr/stream/?stn=kbs&ch=2radio', json: 'schedule/kbs-happyfm.json'},
+      {name: 'KBS ClassicFM', freq: 93.1, url: 'https://radio.bsod.kr/stream/?stn=kbs&ch=1fm', json: 'schedule/kbs-classicfm.json'},
+      {name: 'KBS 1Radio', freq: 97.3, url: 'https://radio.bsod.kr/stream/?stn=kbs&ch=1radio', json: 'schedule/kbs-1radio.json'},
+      {name: 'KBS 3Radio', freq: 104.9, url: 'https://radio.bsod.kr/stream/?stn=kbs&ch=3radio', json: 'schedule/kbs-3radio.json'}
     ]
   },
   {
-  group: 'E T C',
-  list: [
-    {
-      name: 'EBS FM',
-      freq: 104.5,
-      url: 'https://radio.bsod.kr/stream/?stn=ebs',
-      json: 'schedule/ebs-fm.json'
-    },
-    {
-      name: 'TBS FM',
-      freq: 95.1,
-      url: 'https://radio.bsod.kr/stream/?stn=tbs&ch=fm'
-    },
-    {
-      name: 'TBS eFM',
-      freq: 101.3,
-      url: 'https://radio.bsod.kr/stream/?stn=tbs&ch=efm'
-    },
-    {
-      name: 'CBS 표준FM',
-      freq: 98.1,
-      url: 'https://radio.bsod.kr/stream/?stn=cbs&ch=sfm',
-      json: 'schedule/cbs-standardfm.json'
-    },
-    {
-      name: 'CBS 음악FM',
-      freq: 93.9,
-      url: 'https://radio.bsod.kr/stream/?stn=cbs&ch=mfm',
-      json: 'schedule/cbs-musicfm.json'
-    },
-    {
-      name: 'CBS JOY4U',
-      freq: 90.1,
-      url: 'https://radio.bsod.kr/stream/?stn=cbs&ch=joy4u',
-      json: 'schedule/cbs-joy4u.json'
-    }
-  ]
-}
+    group: 'E T C',  // ← 들여쓰기 맞춤
+    list: [
+      {name: 'EBS FM', freq: 104.5, url: 'https://radio.bsod.kr/stream/?stn=ebs', json: 'schedule/ebs-fm.json'},
+      {name: 'TBS FM', freq: 95.1, url: 'https://radio.bsod.kr/stream/?stn=tbs&ch=fm'},
+      {name: 'TBS eFM', freq: 101.3, url: 'https://radio.bsod.kr/stream/?stn=tbs&ch=efm'},
+      {name: 'CBS 표준FM', freq: 98.1, url: 'https://radio.bsod.kr/stream/?stn=cbs&ch=sfm', json: 'schedule/cbs-standardfm.json'},
+      {name: 'CBS 음악FM', freq: 93.9, url: 'https://radio.bsod.kr/stream/?stn=cbs&ch=mfm', json: 'schedule/cbs-musicfm.json'},
+      {name: 'CBS JOY4U', freq: 90.1, url: 'https://radio.bsod.kr/stream/?stn=cbs&ch=joy4u', json: 'schedule/cbs-joy4u.json'}
+    ]
+  }
 ];
+
 
 // ========================================
 // 노이즈 생성
