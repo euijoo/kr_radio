@@ -225,7 +225,7 @@ const channels = [
   {
     group: 'K B S',
     list: [
-      {name: 'KBS CoolFM', freq: 89.1, url: 'https://radio.bsod.kr/stream/?stn=kbs&ch=2fm', json: 'schedule/kbs-coolfm.json'}
+      {name: 'KBS CoolFM', freq: 89.1, url: 'https://radio.bsod.kr/stream/?stn=kbs&ch=2fm', json: 'schedule/kbs-coolfm.json'},
       {name: 'KBS HappyFM', freq: 106.1, url: 'https://radio.bsod.kr/stream/?stn=kbs&ch=2radio', json: 'schedule/kbs-happyfm.json'},
       {name: 'KBS ClassicFM', freq: 93.1, url: 'https://radio.bsod.kr/stream/?stn=kbs&ch=1fm', json: 'schedule/kbs-classicfm.json'},
       {name: 'KBS 1Radio', freq: 97.3, url: 'https://radio.bsod.kr/stream/?stn=kbs&ch=1radio', json: 'schedule/kbs-1radio.json'},
