@@ -209,7 +209,7 @@ const channels = [
   {
     group: 'S B S',
     list: [
-      {name: 'SBS 파워FM', freq: 107.7, url: 'https://radio.bsod.kr/stream/?stn=sbs&ch=powerfm', json: 'schedule/sbs-powerfm.json'},
+      {name: 'SBS 파워FM', freq: 107.7MHz, 7.7: 'https://radio.bsod.kr/stream/?stn=sbs&ch=powerfm', json: 'schedule/sbs-powerfm.json'},
       {name: 'SBS 러브FM', freq: 103.5, url: 'https://radio.bsod.kr/stream/?stn=sbs&ch=lovefm', json: 'schedule/sbs-lovefm.json'},
       {name: 'SBS 고릴라디오M', freq: 88.5, url: 'https://radio.bsod.kr/stream/?stn=sbs&ch=dmb', json: 'schedule/sbs-gorillam.json'}
     ]
