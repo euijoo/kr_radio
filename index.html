@@ -1,78 +1,88 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <!-- PWA manifest -->
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#171717">
-<!-- iOS 홈 화면 웹앱 모드 -->
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  
-
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-  <!-- 외부 CSS -->
-  <link rel="stylesheet" href="style.css">
-  <!-- iOS 홈 화면 아이콘 -->
-  <link rel="apple-touch-icon" sizes="180x180" href="icons/ejf-180.png">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+  />
 
   <title>EJF Radio</title>
+  <meta name="theme-color" content="#171717" />
 
-  <!-- Tailwind (개발용 CDN) -->
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/ejf-180.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
   <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- 외부 CSS -->
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
 </head>
 
 <body class="bg-neutral-900 text-white max-w-md mx-auto">
-<header class="flex justify-between items-center px-4 py-3 text-lg font-semibold">
-  <div>
-    <div>FM Radio</div>
-    <div id="currentTime" class="text-xs font-normal text-gray-400 mt-0.5"></div>
-  </div>
-  <button id="powerBtn" class="w-9 h-9 rounded-full bg-neutral-700"></button>
-</header>
-
-<div class="px-4">
-  <div id="dial" class="relative rounded-xl overflow-hidden bg-neutral-900">
-    <div id="scale" class="scale"></div>
-    <div id="needle"></div>
-    <input id="freqRange" type="range" min="87.5" max="108" step="0.1" class="absolute inset-0 opacity-0 z-20">
-  </div>
-
-  <div id="dialInfo">
-    <div class="flex items-start justify-between">
-      <!-- 왼쪽: 주파수 / 채널 / 프로그램 -->
-      <div class="flex flex-col">
-        <div id="freqText" class="leading-tight"></div>
-        <div id="stationText" class="mt-1 text-[13px] text-gray-300 leading-tight"></div>
-        <div id="nowProgram" class="mt-0.5 text-[12px] text-gray-400 leading-tight"></div>
+  <div class="app-shell min-h-screen flex flex-col">
+    <header class="app-header flex items-center justify-between px-4 py-3">
+      <div class="brand">
+        <h1 class="text-lg font-semibold leading-tight">FM Radio</h1>
+        <p id="currentTime" class="text-xs font-normal text-gray-400 mt-0.5"></p>
       </div>
 
-      <!-- 오른쪽: stereo 램프 + mute 버튼 -->
-      <div class="flex flex-col items-end gap-1">
-        <div class="flex items-center gap-1">
-          <div id="stereoLamp" class="stereo"></div>
+      <button
+        id="powerBtn"
+        type="button"
+        class="w-9 h-9 rounded-full bg-neutral-700"
+        aria-label="라디오 전원"
+      ></button>
+    </header>
+
+    <main class="app-main flex-1">
+      <section class="radio-panel px-4" aria-label="라디오 튜너">
+        <div id="dial" class="relative rounded-xl overflow-hidden bg-neutral-900">
+          <div id="scale" class="scale" aria-hidden="true"></div>
+          <div id="needle" aria-hidden="true"></div>
+
+          <input
+            id="freqRange"
+            type="range"
+            min="87.5"
+            max="108"
+            step="0.1"
+            class="absolute inset-0 opacity-0 z-20"
+            aria-label="주파수 조절"
+          />
         </div>
-        <div class="flex items-center gap-1">
-          <button
-            id="muteBtn"
-            class="w-2 h-2 rounded-full bg-yellow-400/40"
-            aria-label="음소거 전환"
-          ></button>
+
+        <div id="dialInfo" class="pt-3">
+          <div class="flex items-start justify-between gap-4">
+            <div class="min-w-0 flex-1">
+              <div id="freqText" class="leading-tight"></div>
+              <div id="stationText" class="mt-1 text-[13px] text-gray-300 leading-tight"></div>
+              <div id="nowProgram" class="mt-0.5 text-[12px] text-gray-400 leading-tight"></div>
+            </div>
+
+            <div class="flex flex-col items-end gap-2 shrink-0">
+              <div class="flex items-center gap-2" aria-label="스테레오 상태">
+                <div id="stereoLamp" class="stereo" aria-hidden="true"></div>
+              </div>
+
+              <button
+                id="muteBtn"
+                type="button"
+                class="w-2 h-2 rounded-full bg-yellow-400/40"
+                aria-label="음소거"
+              ></button>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
+      </section>
+
+      <section class="channel-section" aria-label="방송사 선택">
+        <div id="tabs" class="flex justify-around px-6 mt-6"></div>
+        <div id="channelList" class="px-4 py-4"></div>
+      </section>
+    </main>
   </div>
 
-  <div id="tabs" class="flex justify-around px-6 mt-6"></div>
-<div id="channelList" class="px-4 py-4"></div>
-</div>
-
-<!-- 외부 JS -->
-<script src="script.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
