@@ -235,7 +235,7 @@ const channels = [
   {
     group: 'E T C',  // ← 들여쓰기 맞춤
     list: [
-      {name: 'EBS FM', freq: 104.5, url: 'https://radio.bsod.kr/stream/?stn=ebs', json: 'schedule/ebs-fm.json'},
+      {name: 'EBS FM', freq: 104.5, url: 'https://ebsonairiosaod.ebs.co.kr/fmradiobandiaod/bandiappaac/playlist.m3u8', json: 'schedule/ebs-fm.json'},
       {name: 'TBS FM', freq: 95.1, url: 'https://radio.bsod.kr/stream/?stn=tbs&ch=fm'},
       {name: 'TBS eFM', freq: 101.3, url: 'https://radio.bsod.kr/stream/?stn=tbs&ch=efm'},
       {name: 'CBS 표준FM', freq: 98.1, url: 'https://radio.bsod.kr/stream/?stn=cbs&ch=sfm', json: 'schedule/cbs-standardfm.json'},
